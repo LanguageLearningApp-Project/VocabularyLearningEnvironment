@@ -1,3 +1,8 @@
 from teaching.items import WordItem
+from teaching.teaching import RandomTeacher
 
-word = WordItem("dog", "hund")
+
+material = [WordItem("dog", "hund"), 
+            WordItem("cat", "katze")]
+
+teacher = RandomTeacher(material)
