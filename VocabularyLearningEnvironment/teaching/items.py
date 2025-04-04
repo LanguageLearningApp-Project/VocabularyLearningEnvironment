@@ -7,6 +7,10 @@ class TeachingItem(ABC):
         pass
     
     @abstractmethod
+    def get_answer(self):
+        pass
+    
+    @abstractmethod
     def is_answer_correct(self, answer) -> bool:
         pass
 
@@ -19,5 +23,8 @@ class WordItem(TeachingItem):
     def get_question(self):
         return self.source
     
+    def get_answer(self):
+        return self.target
+    
     def is_answer_correct(self, answer: str) -> bool:
-        return self.target == answer
+        return self.target == self.get_answer()
