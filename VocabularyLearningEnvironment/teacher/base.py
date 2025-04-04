@@ -7,7 +7,7 @@ from . planning_contexts import PlanningContext
 
 class Planner(ABC):
     @abstractmethod
-    def choose_item(self, material: List[TeachingItem], context: PlanningContext):
+    def choose_item(self, material: List[TeachingItem], context: PlanningContext, time: int):
         pass
 
 
@@ -27,9 +27,9 @@ class Teacher:
         self.context = context
     
     
-    def choose_item(self):
-        return self.planner.choose_item(self.material, self.context)
+    def choose_item(self, time: int):
+        return self.planner.choose_item(self.material, self.context, time)
     
-    def gets_answer(self, queried_item: TeachingItem, answer):
-        self.context.update(queried_item, answer)
+    def gets_answer(self, queried_item: TeachingItem, answer, time: int):
+        self.context.update(queried_item, answer, time)
     

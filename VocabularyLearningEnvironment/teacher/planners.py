@@ -5,5 +5,5 @@ from . items import TeachingItem
 import random
 
 class RandomPlanner(Planner):
-    def choose_item(self, material: List[TeachingItem], context: PlanningContext):
+    def choose_item(self, material: List[TeachingItem], context: PlanningContext, time: int):
         return random.choice(material)

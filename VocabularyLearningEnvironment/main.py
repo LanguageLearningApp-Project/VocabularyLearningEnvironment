@@ -17,8 +17,8 @@ teacher = Teacher(material, planner, context)
 learner = ExpMemoryLearner(.8, .1)
 
 for t in range(10):
-    item = teacher.choose_item()
+    item = teacher.choose_item(t)
     reply = learner.reply(item.get_question(), t)
     learner.learn(item, t)
-    teacher.gets_answer(item, reply)
+    teacher.gets_answer(item, reply, t)
     print("Question:", item.get_question(), " |  Answer:", reply)
