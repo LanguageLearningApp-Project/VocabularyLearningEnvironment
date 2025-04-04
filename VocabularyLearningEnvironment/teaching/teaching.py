@@ -7,6 +7,10 @@ class BaseLearner(ABC):
     @abstractmethod
     def reply(self, question):
         pass
+    
+    @abstractmethod
+    def learn(self, item: TeachingItem):
+        pass
 
 
 class BaseTeacher(ABC):
