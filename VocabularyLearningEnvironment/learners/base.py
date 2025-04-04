@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from teaching.items import TeachingItem
+from teacher.items import TeachingItem
 
 
 class BaseLearner(ABC):
