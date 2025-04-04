@@ -5,11 +5,11 @@ import random
 
 class BaseLearner(ABC):
     @abstractmethod
-    def reply(self, question):
+    def reply(self, question, *args, **kwargs):
         pass
     
     @abstractmethod
-    def learn(self, item: TeachingItem):
+    def learn(self, item: TeachingItem, *args, **kwargs):
         pass
 
 
@@ -18,7 +18,6 @@ class BaseTeacher(ABC):
     def __init__(self, material: List[TeachingItem]):
         is_list = isinstance(material, list)
         contains_teaching_items = all(isinstance(item, TeachingItem) for item in material)
-        print(is_list, contains_teaching_items)
         if not is_list or not(material) or not contains_teaching_items:
             raise TypeError("material must be a non-empty list of TeachingItem instances")
         self.material = material
