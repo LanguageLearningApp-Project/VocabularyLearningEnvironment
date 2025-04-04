@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List
 from .items import TeachingItem
-import random
 
 
 class BaseTeacher(ABC):
@@ -21,11 +20,3 @@ class BaseTeacher(ABC):
     def gets_answer(self, queried_item: TeachingItem, answer):
         pass
     
-    
-
-class RandomTeacher(BaseTeacher):
-    def choose_item(self):
-        return random.choice(self.material)
-    
-    def gets_answer(self, queried_item, answer):
-        pass

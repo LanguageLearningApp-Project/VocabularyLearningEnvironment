@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from . base import BaseLearner
-from teaching.items import TeachingItem
+from teacher.items import TeachingItem
 import numpy as np
 
 

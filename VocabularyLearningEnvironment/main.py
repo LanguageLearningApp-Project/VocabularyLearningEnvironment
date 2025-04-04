@@ -1,5 +1,5 @@
-from teaching.items import WordItem
-from teaching.teaching import RandomTeacher
+from teacher.items import WordItem
+from teacher.random import RandomTeacher
 from learners.exp_memory import ExpMemoryLearner
 
 
