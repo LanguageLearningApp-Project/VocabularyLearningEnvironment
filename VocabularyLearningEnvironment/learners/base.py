@@ -5,11 +5,11 @@ from copy import deepcopy
 
 class BaseLearner(ABC):
     @abstractmethod
-    def reply(self, question, *args, **kwargs):
+    def reply(self, question, time: int):
         pass
     
     @abstractmethod
-    def learn(self, item: TeachingItem, *args, **kwargs):
+    def learn(self, item: TeachingItem, time: int):
         pass
     
     def deepcopy(self):
