@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from teaching.teaching import BaseLearner
+from . base import BaseLearner
 from teaching.items import TeachingItem
 import numpy as np
 
