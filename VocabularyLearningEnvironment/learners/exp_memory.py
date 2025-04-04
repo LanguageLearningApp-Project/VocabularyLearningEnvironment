@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import List
 from teaching.teaching import BaseLearner
 from teaching.items import TeachingItem
 import numpy as np

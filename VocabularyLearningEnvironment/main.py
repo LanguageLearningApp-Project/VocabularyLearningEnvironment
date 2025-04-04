@@ -1,6 +1,6 @@
 from teaching.items import WordItem
 from teaching.teaching import RandomTeacher
-from ExpMemoryLearner.learner import ExpMemoryLearner
+from learners.exp_memory import ExpMemoryLearner
 
 
 material = [WordItem("dog", "hund"), 
