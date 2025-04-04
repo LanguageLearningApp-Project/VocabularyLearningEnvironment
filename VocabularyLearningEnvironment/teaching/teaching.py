@@ -3,15 +3,6 @@ from typing import List
 from .items import TeachingItem
 import random
 
-class BaseLearner(ABC):
-    @abstractmethod
-    def reply(self, question, *args, **kwargs):
-        pass
-    
-    @abstractmethod
-    def learn(self, item: TeachingItem, *args, **kwargs):
-        pass
-
 
 class BaseTeacher(ABC):
     
