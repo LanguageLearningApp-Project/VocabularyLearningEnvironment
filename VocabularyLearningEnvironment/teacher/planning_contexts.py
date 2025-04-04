@@ -18,6 +18,7 @@ class EmptyPlanningContext(PlanningContext):
         pass
     
     def update(self, queried_item: TeachingItem, answer):
+    def update(self, queried_item: TeachingItem, answer, time: int):
         pass
     
 
@@ -27,4 +28,5 @@ class FixedHorizonContext(PlanningContext):
         self.horizon = horizon
     
     def update(self, queried_item: TeachingItem, answer):
+        self.horizon -= 1    def update(self, queried_item: TeachingItem, answer, time: int):
         self.horizon -= 1
