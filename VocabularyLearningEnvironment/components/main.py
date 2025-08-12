@@ -1,21 +1,23 @@
 from teacher.items import WordItem
 from teacher.base import Teacher
-from teacher.planning_contexts import EmptyPlanningContext, FixedHorizonContext, FixedLearnerContext
+from teacher.planning_contexts import (
+    EmptyPlanningContext,
+    FixedHorizonContext,
+    FixedLearnerContext,
+)
 from teacher.planners import RandomPlanner
 from learners.exp_memory import ExpMemoryLearner
 
 
-material = [WordItem("dog", "hund"), 
-            WordItem("cat", "katze")]
+material = [WordItem("dog", "hund"), WordItem("cat", "katze")]
 
 
-
-#context = EmptyPlanningContext()
-context = FixedLearnerContext(ExpMemoryLearner(.4, .1))
+# context = EmptyPlanningContext()
+context = FixedLearnerContext(ExpMemoryLearner(0.4, 0.1))
 planner = RandomPlanner()
 teacher = Teacher(material, planner, context)
 
-learner = ExpMemoryLearner(.4, .1)
+learner = ExpMemoryLearner(0.4, 0.1)
 
 for t in range(10):
     item = teacher.choose_item(t)
