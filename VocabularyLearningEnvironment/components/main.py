@@ -1,12 +1,12 @@
-from teacher.items import WordItem
-from teacher.base import Teacher
-from teacher.planning_contexts import (
+from components.teacher.items import WordItem
+from components.teacher.base import Teacher
+from components.teacher.planning_contexts import (
     EmptyPlanningContext,
     FixedHorizonContext,
     FixedLearnerContext,
 )
-from teacher.planners import RandomPlanner
-from learners.exp_memory import ExpMemoryLearner
+from components.teacher.planners import RandomPlanner
+from components.learners.exp_memory import ExpMemoryLearner
 
 
 material = [WordItem("dog", "hund"), WordItem("cat", "katze")]
