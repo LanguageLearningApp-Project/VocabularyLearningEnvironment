@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from . base import BaseLearner
+from .base import BaseLearner
 from teacher.items import TeachingItem
 import numpy as np
 
@@ -11,10 +11,13 @@ class MemoryState:
     last_occurrence: int
     alpha: float
     beta: float
-    
+
     def get_probability(self, time: int):
-        return np.exp(- self.alpha * (1 - self.beta)**self.n_occurrences * (time - self.last_occurrence))
-    
+        return np.exp(
+            -self.alpha
+            * (1 - self.beta) ** self.n_occurrences
+            * (time - self.last_occurrence)
+        )
 
 
 class ExpMemoryLearner(BaseLearner):
@@ -22,14 +25,13 @@ class ExpMemoryLearner(BaseLearner):
         self.memory = dict()
         self.alpha = alpha
         self.beta = beta
-        
+
     def reply(self, question: str, time: int):
         assert isinstance(question, str), "question must be a character string"
         if question in self.memory:
             memorized = np.random.rand() < self.memory[question].get_probability(time)
             return self.memory[question].item.get_answer() if memorized else None
         return None
-    
 
     def learn(self, item: TeachingItem, time: int):
         question = item.get_question()
