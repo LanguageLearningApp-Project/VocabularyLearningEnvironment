@@ -1,78 +1,72 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VocabularyLearningApp</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
 
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+{% block content %}
+  <div style="display:flex; flex-direction:column; align-items:flex-start; gap:12px;">
+    <h1 style="font-size:28px; margin:0;">Vocabulary Training</h1>
 
-        .container {
-            background-color: white;
-            border-radius: 15px;
-            padding: 40px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            width: 95%;
-            height: 60vh;
-            max-width: 700px;
-            text-align: center;
-        }
+    <input id="answer" type="text" placeholder="Type your answer…"
+           style="font-size:18px; width:300px; padding:8px; border:2px solid #2d6aa6; border-radius:8px;">
 
-        h1 {
-            color: #2563eb;
-            font-size: 2.5em;
-            margin-bottom: 40px;
-            font-weight: bold;
-        }
-
-        .question-box {
-            background-color: #e9e3e3;
-            color: rgba(0, 0, 0, 0.844);
-            padding: 15px 20px;
-            border-radius: 8px;
-            font-size: 1.2em;
-            margin-bottom: 30px;
-            display: block;
-        }
-
-        .answer-input {
-            width: 100%;
-            padding: 15px;
-            font-size: 1.1em;
-            border: 2px solid #ddd;
-            border-radius: 25px;
-            margin-bottom: 30px;
-            outline: none;
-            text-align: center;
-        }
-
-
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-        <h1>Vocabulary Training</h1>
-        </div>
-
-        <div class="question-box" id="questionbox">
-            Question goes here..
-        </div>
-        
-        <input type="text" class="input-answer" id="inputanswer" placeholder="Type your answer here..">     
+    <div class="btn-row">
+      <button id="check" class="btn">Check Answer</button>
+      <button id="next"  class="btn">Next</button>
     </div>
-</body>
-</html>
+
+    <pre id="out" style="margin:8px 0 0; font-size:16px;"></pre>
+  </div>
+
+  <style>
+    .btn-row{ display:flex; gap:12px; }               
+    .btn{
+      font-size:18px; background:#2d6aa6; color:#fff;
+      padding:10px 16px; border:0; border-radius:10px;
+      cursor:pointer; font-weight:600;
+    }
+    .btn:hover{ filter:brightness(1.05); }
+  </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let total = 10;
+let current = 1;
+
+const progressEl = document.getElementById("progress") || (() => {
+   
+    const p = document.createElement("p");
+    p.id = "progress";
+    document.querySelector(".btn-row")?.after(p) || document.body.appendChild(p);
+    return p;
+  })();
+
+  const answerEl = document.getElementById("answer");
+  const nextBtn   = document.getElementById("next");
+  const checkBtn  = document.getElementById("check");
+
+  function updateProgress() {
+    progressEl.textContent = `${current}/${total} questions`;
+  }
+
+  updateProgress();
+
+  checkBtn.addEventListener("click", () => {
+    const val = answerEl.value.trim();
+  });
+
+  nextBtn.addEventListener("click", () => {
+    if (current < total) {
+      current += 1;            
+      updateProgress();
+      answerEl.value = "";
+      answerEl.focus();
+    }
+
+    if (current === total) {
+      nextBtn.disabled = true;
+      nextBtn.textContent = "Done";
+    }
+  });
+
+</script>
+{% endblock %}
