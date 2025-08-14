@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from teacher.items import TeachingItem
-from learners.base import BaseLearner
+from .items import TeachingItem
+from components.learners.base import BaseLearner
 
 
 class PlanningContext(ABC):
