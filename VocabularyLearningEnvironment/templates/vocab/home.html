@@ -72,42 +72,52 @@
 let total = 10;
 let current = 1;
 
+const box      = document.getElementById("questionbox");
+const answerEl = document.getElementById("answer");
+const nextBtn  = document.getElementById("next");
+const checkBtn = document.getElementById("check");
+
 const progressEl = document.getElementById("progress") || (() => {
-   
-    const p = document.createElement("p");
-    p.id = "progress";
-    document.querySelector(".btn-row")?.after(p) || document.body.appendChild(p);
-    return p;
-  })();
+  const p = document.createElement("p");
+  p.id = "progress";
+  document.querySelector(".btn-row")?.after(p) || document.body.appendChild(p);
+  return p;
+})();
 
-  const box      = document.getElementById("questionbox");
-  const answerEl = document.getElementById("answer");
-  const nextBtn   = document.getElementById("next");
-  const checkBtn  = document.getElementById("check");
+function updateProgress() {
+  progressEl.textContent = `${current}/${total} questions`;
+}
 
-  function updateProgress() {
-    progressEl.textContent = `${current}/${total} questions`;
+async function loadWord() {
+  try {
+    const res  = await fetch("{% url 'random_word' %}");
+    const data = await res.json();
+    box.textContent = data.word || "(no word)";
+  } catch (e) {
+    box.textContent = "Could not load word ";
+    console.error(e);
   }
+}
 
-  updateProgress();
+updateProgress();
+loadWord();
 
-  checkBtn.addEventListener("click", () => {
-    const val = answerEl.value.trim();
-  });
+checkBtn.addEventListener("click", () => {
+  const val = answerEl.value.trim();
+});
 
-  nextBtn.addEventListener("click", () => {
-    if (current < total) {
-      current += 1;            
-      updateProgress();
-      answerEl.value = "";
-      answerEl.focus();
-    }
-
-    if (current === total) {
-      nextBtn.disabled = true;
-      nextBtn.textContent = "Done";
-    }
-  });
-
+nextBtn.addEventListener("click", () => {
+  if (current < total) {
+    current += 1;
+    updateProgress();
+    answerEl.value = "";
+    answerEl.focus();
+    loadWord(); 
+  }
+  if (current === total) {
+    nextBtn.disabled = true;
+    nextBtn.textContent = "Done";
+  }
+});
 </script>
 {% endblock %}
