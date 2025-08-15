@@ -69,13 +69,13 @@
 
 {% block extra_js %}
 <script>
-let total = 10;
-let current = 1;
 
 const box      = document.getElementById("questionbox");
 const answerEl = document.getElementById("answer");
 const nextBtn  = document.getElementById("next");
 const checkBtn = document.getElementById("check");
+
+let currentTranslation = "";
 
 const progressEl = document.getElementById("progress") || (() => {
   const p = document.createElement("p");
@@ -84,9 +84,7 @@ const progressEl = document.getElementById("progress") || (() => {
   return p;
 })();
 
-function updateProgress() {
-  progressEl.textContent = `${current}/${total} questions`;
-}
+
 
 async function loadWord() {
   try {
@@ -96,33 +94,33 @@ async function loadWord() {
     <strong>${data.word}</strong><br>
     <em style="color: gray;">${data.translation || "(no translation)"}</em>
   `;
+  currentTranslation = (data.translation || "").trim();
+  answerEl.style.backgroundColor = "";
 
-  console.log("Translation:", data.translation);
+  
   } catch (e) {
     box.textContent = "Could not load word ";
     console.error(e);
   }
 }
 
-updateProgress();
 loadWord();
 
 checkBtn.addEventListener("click", () => {
   const val = answerEl.value.trim();
+  if (val.toLowerCase() === currentTranslation.toLowerCase()) {
+    answerEl.style.backgroundColor = "rgba(154, 255, 154, 0.6)"; 
+  } else {
+    answerEl.style.backgroundColor = "rgba(255, 182, 193, 0.6)"; 
+  }
+  
 });
 
 nextBtn.addEventListener("click", () => {
-  if (current < total) {
-    current += 1;
-    updateProgress();
     answerEl.value = "";
     answerEl.focus();
     loadWord(); 
-  }
-  if (current === total) {
-    nextBtn.disabled = true;
-    nextBtn.textContent = "Done";
-  }
+  
 });
 </script>
 {% endblock %}
