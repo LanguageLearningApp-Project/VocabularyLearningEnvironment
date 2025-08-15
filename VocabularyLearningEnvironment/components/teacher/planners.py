@@ -1,7 +1,7 @@
 from .base import Planner
 from .planning_contexts import PlanningContext
 from typing import List
-from .items import TeachingItem
+from .items import TeachingItem, WordItem
 from wordfreq import top_n_list
 import random
 
@@ -17,6 +17,18 @@ class RandomPlanner(Planner):
     ):
         return random.choice(material)
     
-    def choose_multiple(self, count=10):
+    def choose_multiple(self, count):
         words = top_n_list(self.lang, self.top)[self.skip:]
         return random.sample(words, count)
+
+    def load_chosen_words(self, count):
+        chosen_words = self.choose_multiple(count)
+        teaching_items = []
+
+        for word in chosen_words:
+            teaching_items.append(WordItem(source = word, target = self.get_translation(word)))
+        
+        return teaching_items
+    
+    def get_translation(self, word):
+        pass
