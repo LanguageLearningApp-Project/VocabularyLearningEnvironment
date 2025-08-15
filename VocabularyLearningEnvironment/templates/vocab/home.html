@@ -92,7 +92,12 @@ async function loadWord() {
   try {
     const res  = await fetch("{% url 'random_word' %}");
     const data = await res.json();
-    box.textContent = data.word || "(no word)";
+    box.innerHTML = `
+    <strong>${data.word}</strong><br>
+    <em style="color: gray;">${data.translation || "(no translation)"}</em>
+  `;
+
+  console.log("Translation:", data.translation);
   } catch (e) {
     box.textContent = "Could not load word ";
     console.error(e);

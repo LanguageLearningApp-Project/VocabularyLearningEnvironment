@@ -13,6 +13,8 @@ def home(request):
 def random_word_view(request):
     chosen_item = planner.choose_item(word_list, context=None, time=0)
     question = chosen_item.get_question()
+    translation = chosen_item.get_answer()
     learner.learn(chosen_item, time=0)
 
-    return JsonResponse({"word": question})
+    return JsonResponse({"word": question,
+                        "translation": translation})

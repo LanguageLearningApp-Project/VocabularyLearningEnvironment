@@ -1,3 +1,6 @@
+import html
+
+import requests
 from .base import Planner
 from .planning_contexts import PlanningContext
 from typing import List
@@ -26,9 +29,22 @@ class RandomPlanner(Planner):
         teaching_items = []
 
         for word in chosen_words:
-            teaching_items.append(WordItem(source = word, target = self.get_translation(word)))
+            teaching_items.append(WordItem(source = word, target = self.get_translation(word, "en", "de")))
         
         return teaching_items
     
-    def get_translation(self, word):
-        pass
+    def get_translation(self, word: str, src: str = "en", tgt: str = "de"):
+        try:
+            resp = requests.get(
+                "https://api.mymemory.translated.net/get",
+                params={"q": word, "langpair": f"{src}|{tgt}"},
+                timeout=10,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+    
+            main = (data.get("responseData") or {}).get("translatedText")
+            return html.unescape(main).strip() if main else None
+
+        except Exception as e:
+            return None
