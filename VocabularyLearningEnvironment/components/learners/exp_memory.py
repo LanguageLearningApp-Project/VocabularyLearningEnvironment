@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from .base import BaseLearner
-from teacher.items import TeachingItem
+from components.teacher.items import TeachingItem
 import numpy as np
 
 
@@ -41,3 +41,5 @@ class ExpMemoryLearner(BaseLearner):
         else:
             state = MemoryState(item, 1, time, self.alpha, self.beta)
             self.memory[question] = state
+
+    
