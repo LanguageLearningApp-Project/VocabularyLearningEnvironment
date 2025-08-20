@@ -7,7 +7,7 @@ from typing import List
 from .items import TeachingItem, WordItem
 from wordfreq import top_n_list
 import random
-
+from vocab.models import Vocabulary
 
 class RandomPlanner(Planner):
     def __init__(self, lang="en", top=5000, skip=200):
@@ -44,7 +44,16 @@ class RandomPlanner(Planner):
             data = resp.json()
     
             main = (data.get("responseData") or {}).get("translatedText")
-            return html.unescape(main).strip() if main else None
+        
+            if main:
+                translation = html.unescape(main).strip()
 
+                Vocabulary.objects.create(
+                    source_word=word,
+                    target_word=translation,
+                    source_language=src,
+                    target_language=tgt
+                )
+            
         except Exception as e:
             return None

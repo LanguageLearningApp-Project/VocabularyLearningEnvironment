@@ -28,4 +28,4 @@ class WordItem(TeachingItem):
         return self.target
 
     def is_answer_correct(self, answer: str) -> bool:
-        return self.target == self.get_answer()
+        return self.target.strip().lower() == answer.strip().lower()

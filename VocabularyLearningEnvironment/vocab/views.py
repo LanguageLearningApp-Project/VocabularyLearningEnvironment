@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from components.learners.exp_memory import ExpMemoryLearner
 from components.teacher.planners import RandomPlanner 
+from .models import Vocabulary
 
 planner = RandomPlanner()
 learner = ExpMemoryLearner(0, 0)
@@ -18,3 +19,5 @@ def random_word_view(request):
 
     return JsonResponse({"word": question,
                         "translation": translation})
+
+

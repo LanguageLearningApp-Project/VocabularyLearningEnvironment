@@ -9,9 +9,6 @@ class Vocabulary(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
-def __str__(self):
-    return f"{self.source_word} ({self.source_language}) -> {self.target_word} ({self.target_language})"
+    def __str__(self):
+        return self.source_word + "->" + self.target_word
     
-class Meta:
-    verbose_name = "Vocabulary Word"
-    verbose_name_plural = "Vocabulary Words"
