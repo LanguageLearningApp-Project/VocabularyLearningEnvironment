@@ -54,6 +54,10 @@ class RandomPlanner(Planner):
                     source_language=src,
                     target_language=tgt
                 )
+                return html.unescape(main).strip() 
+            
+            else:
+                return None
             
         except Exception as e:
             return None
