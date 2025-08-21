@@ -55,9 +55,13 @@ def logout(request):
 def join(request):
     if request.method =="POST":
         form = MemberForm(request.POST or None)
-        if form.is_valid():
+        user_name = request.POST.get("user_name")
+        if (form.is_valid() and not(Member.objects.filter(user_name=user_name).exists())):
             form.save()
             messages.success(request, "Account created.")
-        return render(request, "vocab/login.html",{})
+            return redirect("login")
+        else:
+            messages.error(request, "Username already taken.")
+            return redirect("join")
     else:
         return render (request, "vocab/join.html", {})

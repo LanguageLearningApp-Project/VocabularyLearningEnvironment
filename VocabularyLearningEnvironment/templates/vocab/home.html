@@ -119,17 +119,23 @@ checkBtn.addEventListener("click", () => {
   const val = answerEl.value.trim();
   if (val.toLowerCase() === currentTranslation.toLowerCase()) {
     answerEl.style.backgroundColor = "rgba(154, 255, 154, 0.6)"; 
+    setTimeout(() => {
+      answerEl.value = "";
+      answerEl.style.backgroundColor = ""; 
+      answerEl.focus();
+      loadWord();
+    }, 500);
   } else {
     answerEl.style.backgroundColor = "rgba(255, 182, 193, 0.6)"; 
+    setTimeout(() => {
+      answerEl.value = "";
+      answerEl.style.backgroundColor = ""; 
+      answerEl.focus();
+      loadWord();
+    }, 500);
   }
   
 });
 
-nextBtn.addEventListener("click", () => {
-    answerEl.value = "";
-    answerEl.focus();
-    loadWord(); 
-  
-});
 </script>
 {% endblock %}
