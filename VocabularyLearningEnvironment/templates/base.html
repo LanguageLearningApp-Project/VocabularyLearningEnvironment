@@ -10,7 +10,7 @@
     integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
     crossorigin="anonymous"
   >
-  
+
   <style>
     body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
     .container { max-width: 800px; margin: 40px auto; padding: 0 16px; }
@@ -19,6 +19,21 @@
   </style>
 </head>
 <body>
+
+  <div class="d-flex justify-content-end p-2">
+    {% if request.session.member_id %}
+      <small>
+        Hello, {{ request.session.member_username }} |
+        <a href="{% url 'logout' %}">Logout</a>
+      </small>
+    {% else %}
+      <small>
+        <a href="{% url 'login' %}">Login</a> |
+        <a href="{% url 'join' %}">Register</a>
+      </small>
+    {% endif %}
+  </div>
+
   <main class="container">
     {% block content %}{% endblock %}
   </main>

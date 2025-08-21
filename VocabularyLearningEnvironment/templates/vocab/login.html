@@ -3,10 +3,10 @@
 {% block title %}Welcome!{% endblock %}
 
 {%block content%}
-<h1 class="mb-4">Welcome!</h1>
+<h1 class="mb-4">Login</h1>
 <br/><br/>
 
-  <form method = "POST" action= "{% url 'join' %}">
+  <form method = "POST" action= "{% url 'login' %}">
     {% csrf_token %}
 
     <div class="mb-3">
@@ -18,7 +18,7 @@
       <input type="password" class="form-control" placeholder = "Password" name = "password" required>
     </div>
 
-    <button type="submit" class="btn btn-primary">Register</button>
+    <button type="submit" class="btn btn-primary">Login</button>
   </form>
 
   {% endblock %}

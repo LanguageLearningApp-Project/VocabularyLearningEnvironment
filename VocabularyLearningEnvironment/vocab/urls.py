@@ -1,9 +1,11 @@
 from django.urls import path
 from . import views
-from . views import random_word_view, join
+from . views import random_word_view, join, login, logout
 
 urlpatterns = [
     path("", views.home, name="home"),
     path('random-word/', random_word_view, name='random_word'),
     path("join", join, name="join"),
+    path("login", login, name = "login"),
+    path("logout", logout, name="logout"),
 ]
