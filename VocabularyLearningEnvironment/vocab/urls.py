@@ -3,7 +3,9 @@ from . import views
 from . views import random_word_view, join
 
 urlpatterns = [
-    path("", views.home, name="home"),
+    path('main_page/', views.main_page, name='main_page'),
+    path('home/', views.home, name="home"),
     path('random-word/', random_word_view, name='random_word'),
-    path("join/", join, name="join"),
+    path('join/', join, name="join"),
+
 ]
