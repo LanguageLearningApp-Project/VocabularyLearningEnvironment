@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.http import JsonResponse
 from components.learners.exp_memory import ExpMemoryLearner
 from components.teacher.planners import RandomPlanner 
@@ -32,3 +32,12 @@ def random_word_view(request):
                         "translation": translation})
 
 
+def join(request):
+    if request.method =="POST":
+        form = MemberForm(request.POST or None)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Account created.")
+        return render(request, "vocab/home.html",{})
+    else:
+        return render (request, "vocab/join.html", {})
