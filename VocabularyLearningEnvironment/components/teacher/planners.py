@@ -1,5 +1,4 @@
 import html
-
 import requests
 from .base import Planner
 from .planning_contexts import PlanningContext
@@ -8,8 +7,14 @@ from .items import TeachingItem, WordItem
 from wordfreq import top_n_list
 import random
 from vocab.models import Vocabulary
+import spacy
+import re
+import json
+
+nlp = spacy.load("en_core_web_sm")
 
 class RandomPlanner(Planner):
+
     def __init__(self, lang="en", top=5000, skip=200):
         self.lang = lang
         self.top = top
@@ -25,12 +30,20 @@ class RandomPlanner(Planner):
         return random.sample(words, count)
 
     def load_chosen_words(self, count):
-        chosen_words = self.choose_multiple(count)
+        chosen_words = self.choose_multiple(count*2)
         teaching_items = []
 
         for word in chosen_words:
-            teaching_items.append(WordItem(source = word, target = self.get_translation(word, "en", "de")))
-        
+            word_clean = self.clean_word(word)
+            if not word_clean:
+                continue
+            if not self.is_valid_word(word_clean):
+                continue
+            
+            teaching_items.append(WordItem(source = word_clean, target = self.get_translation(word_clean, "en", "de")))
+            if len(teaching_items) == count:
+                break 
+
         return teaching_items
     
     def get_translation(self, word: str, src: str = "en", tgt: str = "de"):
@@ -54,10 +67,21 @@ class RandomPlanner(Planner):
                     source_language=src,
                     target_language=tgt
                 )
-                return html.unescape(main).strip() 
+                return translation
             else:
                 return None
 
             
         except Exception as e:
             return None
+
+    def clean_word(self, word: str):
+            word_clean = re.sub(r'[^A-Za-z-]', '', word)
+            return word_clean if word_clean else None
+
+    def is_valid_word(self, word: str):
+        doc = nlp(word)
+        for token in doc:
+            if token.pos_ in ["NOUN", "VERB", "ADJ"]:
+                return True
+        return False
