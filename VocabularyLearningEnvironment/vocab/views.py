@@ -3,7 +3,9 @@ from django.http import JsonResponse
 from components.learners.exp_memory import ExpMemoryLearner
 from components.teacher.planners import RandomPlanner 
 from .forms import MemberForm
+from .models import Member
 from django.contrib import messages
+from django.shortcuts import redirect
 
 planner = RandomPlanner()
 learner = ExpMemoryLearner(0, 0)
@@ -24,6 +26,28 @@ def random_word_view(request):
     return JsonResponse({"word": question,
                         "translation": translation})
 
+def login(request):
+    if request.method =="POST":
+        user_name = request.POST.get("user_name")
+        password = request.POST.get("password")
+        try:
+            member = Member.objects.get(user_name=user_name, password=password)
+            
+            request.session["member_id"] = member.id
+            request.session["member_username"] = member.user_name
+
+            return render(request, "vocab/home.html",{})
+        except:
+            messages.error(request, "Invalid username or password.")
+            return render(request, "vocab/login.html", {})
+            
+    else:
+        return render (request, "vocab/login.html", {})
+    
+def logout(request):
+    request.session.flush()
+    return redirect("main_page") 
+                
 
 def join(request):
     if request.method =="POST":
@@ -31,6 +55,6 @@ def join(request):
         if form.is_valid():
             form.save()
             messages.success(request, "Account created.")
-        return render(request, "vocab/home.html",{})
+        return render(request, "vocab/login.html",{})
     else:
         return render (request, "vocab/join.html", {})

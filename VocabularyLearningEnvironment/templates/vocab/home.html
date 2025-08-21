@@ -1,7 +1,16 @@
 {% extends "base.html" %}
 {% block title %}Home{% endblock %}
 
-{% block content %}
+{% block content %}  
+    <div class="d-flex justify-content-end p-2">
+        {% if request.session.member_id %}
+            <small>
+            {{ request.session.member_username }} |
+            <a href="{% url 'logout' %}">Logout</a>
+            </small>
+        {% endif %}
+    </div>
+
     <h1>Vocabulary Training</h1>
 
     <div class="question-box" id="questionbox">
