@@ -14,6 +14,9 @@ word_list = planner.load_chosen_words(10)
 def main_page(request):
     return render(request, "vocab/main_page.html")
 
+def user_page(request):
+    return render(request, "vocab/user_page.html")
+
 def home(request):
     return render(request, "vocab/home.html")
 
@@ -36,7 +39,7 @@ def login(request):
             request.session["member_id"] = member.id
             request.session["member_username"] = member.user_name
 
-            return render(request, "vocab/home.html",{})
+            return redirect("user_page")
         except:
             messages.error(request, "Invalid username or password.")
             return render(request, "vocab/login.html", {})
