@@ -55,9 +55,9 @@ class RandomPlanner(Planner):
                     target_language=tgt
                 )
                 return html.unescape(main).strip() 
-            
             else:
                 return None
+
             
         except Exception as e:
             return None

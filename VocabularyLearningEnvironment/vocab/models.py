@@ -12,3 +12,9 @@ class Vocabulary(models.Model):
     def __str__(self):
         return self.source_word + "->" + self.target_word
     
+class Member(models.Model):
+    user_name= models.CharField(max_length=100)
+    password = models.CharField(max_length=50)
+    
+    def __str__(self):
+        return self.user_name
