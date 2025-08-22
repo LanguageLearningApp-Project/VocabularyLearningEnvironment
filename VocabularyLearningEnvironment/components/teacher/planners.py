@@ -1,3 +1,4 @@
+import html
 import requests
 from .base import Planner
 from .planning_contexts import PlanningContext
@@ -5,12 +6,12 @@ from typing import List
 from .items import TeachingItem, WordItem
 from wordfreq import top_n_list
 import random
-from vocab.models import Vocabulary, VocabularyList
+from vocab.models import Vocabulary
 import spacy
-import re, html
+import re
+import json
 
 nlp = spacy.load("en_core_web_sm")
-_ALLOWED = re.compile(r"[A-Za-zÀ-ÖØ-öø-ÿ\-]+")
 
 class RandomPlanner(Planner):
 
@@ -39,21 +40,19 @@ class RandomPlanner(Planner):
             if not self.is_valid_word(word_clean):
                 continue
             
-            translation = self.get_translation(word_clean, "en", "de")
-            if not translation:
-                continue
-            
-            teaching_items.append(WordItem(source=word_clean, target=translation))
+            teaching_items.append(WordItem(source = word_clean, target = self.get_translation(word_clean, "en", "de")))
             if len(teaching_items) == count:
                 break 
 
         return teaching_items
+    def clean_translation(text: str):
+        if not text:
+            return ""
+        cleaned = text.replace("*", "")
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        return cleaned
     
-    @staticmethod
-    def strip_stars(text: str) -> str:
-        return (text or "").replace("*", "").strip()
-    
-    def get_translation(self, word: str, current_list: VocabularyList, src: str = "en", tgt: str = "de"):
+    def get_translation(self, word: str, src: str = "en", tgt: str = "de"):
         try:
             resp = requests.get(
                 "https://api.mymemory.translated.net/get",
@@ -62,19 +61,27 @@ class RandomPlanner(Planner):
             )
             resp.raise_for_status()
             data = resp.json()
-            
+
             main = (data.get("responseData") or {}).get("translatedText") or ""
-            cleaned = self.strip_stars(html.unescape(main)).strip()
-        
-            if cleaned:
-                Vocabulary.objects.create(
-                    source_word=word,
-                    target_word=cleaned, #cleaned is simply the cleaned translation from any symbols like *
-                    source_language=src,
-                    target_language=tgt,
-                )
-                return cleaned
-            
+            raw = html.unescape(main).strip()
+
+            # Eğer çeviride yıldız varsa temizle
+            if "*" in raw:
+                cleaned = self.clean_translation(raw)
+            else:
+                cleaned = raw
+
+            if not cleaned:
+                return ""
+
+            Vocabulary.objects.create(
+                source_word=word,
+                target_word=cleaned,
+                source_language=src,
+                target_language=tgt,
+            )
+            return cleaned
+
         except Exception:
             return ""
 
