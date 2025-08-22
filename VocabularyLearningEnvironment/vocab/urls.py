@@ -10,5 +10,5 @@ urlpatterns = [
     path("login", login, name = "login"),
     path("logout", logout, name="logout"),
     path('join/', join, name="join"),
-    path('create_list/', views.create_list, name="create_list")
+    path('create_list/<int:count>/', views.create_list, name="create_list")
 ]

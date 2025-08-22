@@ -17,6 +17,23 @@ def user_page(request):
     member_id = request.session.get("member_id")
     user_decks = VocabularyList.objects.filter(user_id=member_id)
     username = request.session.get("member_username")
+    if not user_decks.exists():
+        next_number = 1
+        deck = VocabularyList.objects.create(
+            user_id=member_id,
+            list_name=f"Deck {next_number}",
+            description="Automatically"
+        )
+        word_items = planner.load_chosen_words(10)  
+        for item in word_items:
+            Vocabulary.objects.create(
+                source_word=item.source,
+                target_word=item.target,
+                source_language="en",
+                target_language="de",
+                vocabulary_list_id=deck.id
+            )
+        user_decks = [deck]
     return render(request, "vocab/user_page.html", {"username": username, "user_decks": user_decks})
 
 def home(request):
@@ -92,17 +109,17 @@ def join(request):
     
 def create_list(request, count):
     if request.method == "POST":
-        name = request.POST.get("list_name")
-        desc = request.POST.get("description")
         member_id = request.session.get("member_id")
-        
-        if member_id and name:
+        if member_id:
+            next_number = VocabularyList.objects.filter(user_id=member_id).count() + 1
+            name = f"Deck {next_number}"
+            desc = f"Deck number {next_number}"
+            
             deck = VocabularyList.objects.create(
                 user_id=member_id,
-                list_name=name, 
+                list_name=name,
                 description=desc
             )
-
             word_items = planner.load_chosen_words(count)
             for item in word_items:
                 Vocabulary.objects.create(
