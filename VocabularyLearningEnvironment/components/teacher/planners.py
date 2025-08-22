@@ -45,6 +45,12 @@ class RandomPlanner(Planner):
                 break 
 
         return teaching_items
+    def clean_translation(text: str):
+        if not text:
+            return ""
+        cleaned = text.replace("*", "")
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        return cleaned
     
     def get_translation(self, word: str, src: str = "en", tgt: str = "de"):
         try:
@@ -55,18 +61,29 @@ class RandomPlanner(Planner):
             )
             resp.raise_for_status()
             data = resp.json()
-    
-            main = (data.get("responseData") or {}).get("translatedText")
-        
-            if main:
-                translation = html.unescape(main).strip()
-                return translation
-            else:
-                return None
 
-            
-        except Exception as e:
-            return None
+            main = (data.get("responseData") or {}).get("translatedText") or ""
+            raw = html.unescape(main).strip()
+
+            # Eğer çeviride yıldız varsa temizle
+            if "*" in raw:
+                cleaned = self.clean_translation(raw)
+            else:
+                cleaned = raw
+
+            if not cleaned:
+                return ""
+
+            Vocabulary.objects.create(
+                source_word=word,
+                target_word=cleaned,
+                source_language=src,
+                target_language=tgt,
+            )
+            return cleaned
+
+        except Exception:
+            return ""
 
     def clean_word(self, word: str):
             word_clean = re.sub(r'[^A-Za-z-]', '', word)
