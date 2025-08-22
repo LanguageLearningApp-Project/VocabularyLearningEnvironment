@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from .base import BaseLearner
-from components.teacher.items import TeachingItem
+from components.teacher.items import TeachingItem, WordItem
 import numpy as np
 
 
@@ -43,3 +43,28 @@ class ExpMemoryLearner(BaseLearner):
             self.memory[question] = state
 
     
+    def load_memory(self, memory_dict):
+        self.memory = {}
+        for question, state in memory_dict.items():
+            item = WordItem(state['item']['source'], state['item']['target'])
+            
+            mem_state = MemoryState(
+                item=item,
+                n_occurrences=state['n_occurrences'],
+                last_occurrence=state['last_occurrence'],
+                alpha=state['alpha'],
+                beta=state['beta']
+            )
+            self.memory[question] = mem_state
+
+    def dump_memory(self):
+        memory_dict = {}
+        for q, state in self.memory.items():
+            memory_dict[q] = {
+                "item": {"source": state.item.source, "target": state.item.target},
+                "n_occurrences": state.n_occurrences,
+                "last_occurrence": state.last_occurrence,
+                "alpha": state.alpha,
+                "beta": state.beta
+            }
+        return memory_dict

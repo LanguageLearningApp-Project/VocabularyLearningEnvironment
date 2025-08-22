@@ -23,6 +23,8 @@ class Member(models.Model):
 class VocabularyList(models.Model):
     list_name = models.CharField(max_length=100)
     description = models.CharField(max_length=200)
+    user_id = models.IntegerField(default=0)
+
 
     def __str__(self):
         return self.list_name
@@ -37,4 +39,10 @@ class userAnswer(models.Model):
         return "User " + str(self.user_id) + " - Question " + str(self.question_id)
 
 
+class UserMemory(models.Model):
+    user = models.OneToOneField('Member', on_delete=models.CASCADE)
+    memory_json = models.JSONField(default=dict)  
+
+    def __str__(self):
+        return f"Memory of {self.user.user_name}"
 

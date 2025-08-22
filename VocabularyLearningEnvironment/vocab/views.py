@@ -1,33 +1,52 @@
 from django.shortcuts import redirect, render
 from django.http import JsonResponse
+from components.teacher.items import WordItem
 from components.learners.exp_memory import ExpMemoryLearner
 from components.teacher.planners import RandomPlanner 
 from .forms import MemberForm
-from .models import Member
+from .models import Member, UserMemory, Vocabulary, VocabularyList, userAnswer
 from django.contrib import messages
 from django.shortcuts import redirect
 
 planner = RandomPlanner()
-learner = ExpMemoryLearner(0, 0)
-word_list = planner.load_chosen_words(10)
 
 def main_page(request):
     return render(request, "vocab/main_page.html")
 
 def user_page(request):
-    return render(request, "vocab/user_page.html")
+    member_id = request.session.get("member_id")
+    user_decks = VocabularyList.objects.filter(user_id=member_id)
+    username = request.session.get("member_username")
+    return render(request, "vocab/user_page.html", {"username": username, "user_decks": user_decks})
 
 def home(request):
     return render(request, "vocab/home.html")
 
-def random_word_view(request):
-    chosen_item = planner.choose_item(word_list, context=None, time=0)
+def random_word_view(request, deck_id):
+    member_id = request.session.get("member_id")
+    deck = Vocabulary.objects.filter(vocabulary_list_id=deck_id)
+    
+    item_list = []
+
+    for vocab in deck:
+        item_list.append(WordItem(source = vocab.source_word, target = vocab.target_word))
+
+    learner_memory = request.session.get("learner_memory", "{}")
+    learner = ExpMemoryLearner(alpha=0.1, beta=0.5)
+    learner.load_memory(learner_memory)
+
+    chosen_item = planner.choose_item(item_list, context=None, time=0)
     question = chosen_item.get_question()
     translation = chosen_item.get_answer()
+    
     learner.learn(chosen_item, time=0)
 
-    return JsonResponse({"word": question,
-                        "translation": translation})
+    request.session["learner_memory"] = learner.dump_memory()
+    user_mem, _ = UserMemory.objects.get_or_create(user_id=member_id)
+    user_mem.memory_json = learner.dump_memory()
+    user_mem.save()
+
+    return JsonResponse({"word": question, "translation": translation})
 
 def login(request):
     if request.method =="POST":
@@ -39,6 +58,12 @@ def login(request):
             request.session["member_id"] = member.id
             request.session["member_username"] = member.user_name
 
+            user_mem, _ = UserMemory.objects.get_or_create(user=member)
+            learner = ExpMemoryLearner(alpha=0.1, beta=0.5)
+            learner.load_memory(user_mem.memory_json)
+
+            request.session["learner_memory"] = user_mem.memory_json  
+
             return redirect("user_page")
         except:
             messages.error(request, "Invalid username or password.")
@@ -49,8 +74,7 @@ def login(request):
     
 def logout(request):
     request.session.flush()
-    return redirect("main_page") 
-                
+    return redirect("main_page")                
 
 def join(request):
     if request.method =="POST":
@@ -65,3 +89,28 @@ def join(request):
             return redirect("join")
     else:
         return render (request, "vocab/join.html", {})
+    
+def create_list(request, count):
+    if request.method == "POST":
+        name = request.POST.get("list_name")
+        desc = request.POST.get("description")
+        member_id = request.session.get("member_id")
+        
+        if member_id and name:
+            deck = VocabularyList.objects.create(
+                user_id=member_id,
+                list_name=name, 
+                description=desc
+            )
+
+            word_items = planner.load_chosen_words(count)
+            for item in word_items:
+                Vocabulary.objects.create(
+                    source_word=item.source,
+                    target_word=item.target,
+                    source_language="en",
+                    target_language="de",
+                    vocabulary_list_id=deck.id
+                )
+                    
+        return redirect("user_page")

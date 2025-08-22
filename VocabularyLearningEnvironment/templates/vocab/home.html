@@ -93,11 +93,16 @@ const progressEl = document.getElementById("progress") || (() => {
   return p;
 })();
 
+const urlParams = new URLSearchParams(window.location.search);
+const currentDeckId = urlParams.get('deck_id');
 
+if (currentDeckId) {
+    loadWord(currentDeckId); // deckId ile ilk kelimeyi yükle
+}
 
-async function loadWord() {
+async function loadWord(deckId) {
   try {
-    const res  = await fetch("{% url 'random_word' %}");
+    const res  = await fetch(`/random-word/${deckId}/`);
     const data = await res.json();
     box.innerHTML = `
     <strong>${data.word}</strong><br>
@@ -113,17 +118,17 @@ async function loadWord() {
   }
 }
 
-loadWord();
 
 checkBtn.addEventListener("click", () => {
   const val = answerEl.value.trim();
   if (val.toLowerCase() === currentTranslation.toLowerCase()) {
+    
     answerEl.style.backgroundColor = "rgba(154, 255, 154, 0.6)"; 
     setTimeout(() => {
       answerEl.value = "";
       answerEl.style.backgroundColor = ""; 
       answerEl.focus();
-      loadWord();
+      loadWord(currentDeckId);      
     }, 500);
   } else {
     answerEl.style.backgroundColor = "rgba(255, 182, 193, 0.6)"; 
@@ -131,7 +136,7 @@ checkBtn.addEventListener("click", () => {
       answerEl.value = "";
       answerEl.style.backgroundColor = ""; 
       answerEl.focus();
-      loadWord();
+      loadWord(currentDeckId);
     }, 500);
   }
   

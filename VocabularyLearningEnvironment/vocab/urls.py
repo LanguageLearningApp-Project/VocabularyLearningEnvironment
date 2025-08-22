@@ -6,8 +6,9 @@ urlpatterns = [
     path('', views.main_page, name='main_page'),
     path('user_page/', user_page, name="user_page"),
     path('home/', views.home, name="home"),
-    path('random-word/', random_word_view, name='random_word'),
+    path('random-word/<int:deck_id>/', random_word_view, name='random_word'),
     path("login", login, name = "login"),
     path("logout", logout, name="logout"),
     path('join/', join, name="join"),
+    path('create_list/', views.create_list, name="create_list")
 ]

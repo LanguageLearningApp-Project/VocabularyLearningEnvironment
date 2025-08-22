@@ -60,13 +60,6 @@ class RandomPlanner(Planner):
         
             if main:
                 translation = html.unescape(main).strip()
-
-                Vocabulary.objects.create(
-                    source_word=word,
-                    target_word=translation,
-                    source_language=src,
-                    target_language=tgt
-                )
                 return translation
             else:
                 return None
