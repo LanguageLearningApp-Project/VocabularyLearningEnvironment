@@ -1,9 +1,16 @@
 from django.db import models
 
+class Member(models.Model):
+    user_name = models.CharField(max_length=100, unique=True)
+    password = models.CharField(max_length=50)
+    
+    def __str__(self):
+        return self.user_name
+    
 class VocabularyList(models.Model):
     list_name = models.CharField(max_length=100)
     description = models.CharField(max_length=200)
-    user_id = models.IntegerField(default=0)
+    user = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="vocabulary_lists")
 
 
     def __str__(self):
@@ -17,22 +24,15 @@ class Vocabulary(models.Model):
     target_language = models.CharField(max_length=50)
 
     created_at = models.DateTimeField(auto_now_add=True)
-    vocabulary_list_id = models.IntegerField(default=0)
+    vocabulary_list = models.ForeignKey(VocabularyList, on_delete=models.CASCADE, related_name="vocabularies")
     
     def __str__(self):
         return self.source_word + "->" + self.target_word
     
-class Member(models.Model):
-    user_name = models.CharField(max_length=100)
-    password = models.CharField(max_length=50)
-    
-    def __str__(self):
-        return self.user_name
 
-
-class userAnswer(models.Model):
-    question_id = models.IntegerField(default=0)
-    user_id = models.IntegerField(default=0)
+class UserAnswer(models.Model):
+    question = models.ForeignKey(Vocabulary, on_delete=models.CASCADE, null=True, blank=True)
+    user = models.ForeignKey(Member, on_delete=models.CASCADE, null=True, blank=True)
     given_answer = models.CharField(max_length=100)
     answer_time = models.DateTimeField(auto_now_add=True)
 
