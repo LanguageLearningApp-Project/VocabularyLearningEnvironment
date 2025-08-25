@@ -5,6 +5,20 @@
 {% block content %}
 <div class="user_page_container">
   <h1>Welcome, {{ username }}!</h1>
+  
+  <div class="create_deck_card">
+      <form method="post" action="{% url 'create_list' 10 %}">
+        {% csrf_token %} 
+
+        <button class="create_button" type="submit">Create New Deck</button>
+            
+        <div class="deck_inputs">
+            <input class="name_deck_input" type="text" name="list_name" placeholder="Deck name" required>
+            <input class="desc_deck_input" type="text" name="description" placeholder="Description">
+        </div>  
+ 
+      </form>
+  </div>
 
   <div class="deck-container">
     {% for deck in user_decks %}
@@ -14,15 +28,7 @@
       </div>
     {% endfor %}
 
-    <!-- Create New Deck as a card -->
-    <div class="deck-card create-card">
-      <form method="post" action="{% url 'create_list' 10 %}">
-        {% csrf_token %}
-        <input type="hidden" name="list_name" value="Default Deck">
-        <input type="hidden" name="description" value="Automatic starter list">
-        <button type="submit" class="deck-btn">+ Create New Deck</button>
-      </form>
-    </div>
+    
   </div>
 </div>
 {% endblock %}
@@ -33,16 +39,17 @@
         background-color:#f0f4f8;
         padding:10px;
         text-align:center;
-        width:100%;          /* full width */
-        min-height:100vh;    /* full height */
-        border-radius:30px;     /* remove rounding */
-        box-shadow:none;     /* optional: remove shadow for flat full-page look */
+        width:95%;          
+        min-height:100vh;    
+        border-radius:30px;    
+        box-shadow:0 4px 20px rgba(0, 0, 0, 0.1);    
+        margin: 60px auto;
   }
     
   h1{
     color:#1e4eb6;
     font-size:2rem;
-    margin:0 0 28px;
+    margin: 35px 0;
     font-weight:800;
   }
 
@@ -85,10 +92,59 @@
   }
   .deck-btn:hover{ background:#1e4eb6; }
 
+  .create_deck_card{
+    background:#fff;
+    display: flex;
+    justify-content: center;
+    margin: 20px auto;
+    border-radius:14px;
+    box-shadow:0 6px 20px rgba(0,0,0,.10);
+    padding:20px;
+    width:525px;
+    text-align:center;
+    transition:transform .18s ease, box-shadow .18s ease;
+  } 
+
+  .create_button{
+    border:none;
+    border-radius:10px;
+    background:#2d6aa6;
+    color:#fff;
+    cursor:pointer;
+    font-weight:700;
+    width:240px;
+    height: 45px;
+    margin-bottom: 10px; /* alt boşluk */
+    margin-top: 0px;     /* üst boşluk */
+  }
+  .create_button:hover{ background:#1e4eb6; }
+
   .create-card{
     display:flex;
     align-items:center;
     justify-content:center;
+  }
+
+  .deck_inputs{
+    display: flex; 
+    background:#2d6aa6; 
+    color:#fff; 
+    padding:6px 6px; 
+    border: 1px solid #aaa;   
+    border-radius: 15px;
+    cursor:pointer;
+    width:500px;
+    gap:3px;
+  }
+
+  .deck_inputs input{
+    font-size:18px; 
+    width:400px; 
+    padding:8px; 
+    border:2px solid #2d6aa6; 
+    background-color:#d3e2f1;
+    border-radius:8px; 
+    display: block;    
   }
 </style>
 {% endblock %}

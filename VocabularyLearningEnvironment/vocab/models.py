@@ -3,8 +3,7 @@ from django.db import models
 class VocabularyList(models.Model):
     list_name = models.CharField(max_length=100)
     description = models.CharField(max_length=200)
-    user_id = models.IntegerField(default=0)
-
+    user = models.ForeignKey('Member', on_delete=models.CASCADE)
 
     def __str__(self):
         return self.list_name
@@ -17,8 +16,7 @@ class Vocabulary(models.Model):
     target_language = models.CharField(max_length=50)
 
     created_at = models.DateTimeField(auto_now_add=True)
-    vocabulary_list_id = models.IntegerField(default=0)
-    
+    vocabulary_list = models.ForeignKey(VocabularyList, on_delete=models.CASCADE)
     def __str__(self):
         return self.source_word + "->" + self.target_word
     

@@ -109,17 +109,17 @@ def join(request):
     
 def create_list(request, count):
     if request.method == "POST":
-        member_id = request.session.get("member_id")
-        if member_id:
-            next_number = VocabularyList.objects.filter(user_id=member_id).count() + 1
-            name = f"Deck {next_number}"
-            desc = f"Deck number {next_number}"
+        member = Member.objects.get(id=request.session.get("member_id"))
+        if member:
+            list_name = request.POST.get("list_name")
+            description = request.POST.get("description")
             
-            deck = VocabularyList.objects.create(
-                user_id=member_id,
-                list_name=name,
-                description=desc
+            new_deck = VocabularyList.objects.create(
+                list_name=list_name,
+                description=description,
+                user=member
             )
+
             word_items = planner.load_chosen_words(count)
             for item in word_items:
                 Vocabulary.objects.create(
@@ -127,7 +127,7 @@ def create_list(request, count):
                     target_word=item.target,
                     source_language="en",
                     target_language="de",
-                    vocabulary_list_id=deck.id
+                    vocabulary_list=new_deck
                 )
                     
         return redirect("user_page")
