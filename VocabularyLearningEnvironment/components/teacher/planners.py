@@ -65,25 +65,15 @@ class RandomPlanner(Planner):
             main = (data.get("responseData") or {}).get("translatedText") or ""
             raw = html.unescape(main).strip()
 
-            # Eğer çeviride yıldız varsa temizle
             if "*" in raw:
                 cleaned = self.clean_translation(raw)
             else:
                 cleaned = raw
 
-            if not cleaned:
-                return ""
-
-            Vocabulary.objects.create(
-                source_word=word,
-                target_word=cleaned,
-                source_language=src,
-                target_language=tgt,
-            )
-            return cleaned
-
+            return cleaned or ""
         except Exception:
             return ""
+
 
     def clean_word(self, word: str):
             word_clean = re.sub(r'[^A-Za-z-]', '', word)

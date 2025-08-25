@@ -1,10 +1,10 @@
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.http import JsonResponse
 from components.teacher.items import WordItem
 from components.learners.exp_memory import ExpMemoryLearner
 from components.teacher.planners import RandomPlanner 
 from .forms import MemberForm
-from .models import Member, UserMemory, Vocabulary, VocabularyList, userAnswer
+from .models import Member, UserMemory, Vocabulary, VocabularyList
 from django.contrib import messages
 from django.shortcuts import redirect
 
@@ -15,33 +15,46 @@ def main_page(request):
 
 def user_page(request):
     member_id = request.session.get("member_id")
-    user_decks = VocabularyList.objects.filter(user_id=member_id)
+    member = get_object_or_404(Member, id=member_id)
+    user_decks = VocabularyList.objects.filter(user=member)
     username = request.session.get("member_username")
+
     if not user_decks.exists():
         next_number = 1
+        name = f"Deck {next_number}"
+        desc = "Automatically created"
+
         deck = VocabularyList.objects.create(
-            user_id=member_id,
-            list_name=f"Deck {next_number}",
-            description="Automatically"
+            user=member,
+            list_name=name,
+            description=desc
         )
-        word_items = planner.load_chosen_words(10)  
+
+        word_items = planner.load_chosen_words(10)
         for item in word_items:
             Vocabulary.objects.create(
                 source_word=item.source,
                 target_word=item.target,
                 source_language="en",
                 target_language="de",
-                vocabulary_list_id=deck.id
+                vocabulary_list=deck
             )
+
         user_decks = [deck]
-    return render(request, "vocab/user_page.html", {"username": username, "user_decks": user_decks})
+
+    return render(
+        request,
+        "vocab/user_page.html",
+        {"username": username, "user_decks": user_decks}
+    )
+
 
 def home(request):
     return render(request, "vocab/home.html")
 
 def random_word_view(request, deck_id):
     member_id = request.session.get("member_id")
-    deck = Vocabulary.objects.filter(vocabulary_list_id=deck_id)
+    deck = Vocabulary.objects.filter(vocabulary_list__id=deck_id)
     
     item_list = []
 
@@ -59,7 +72,8 @@ def random_word_view(request, deck_id):
     learner.learn(chosen_item, time=0)
 
     request.session["learner_memory"] = learner.dump_memory()
-    user_mem, _ = UserMemory.objects.get_or_create(user_id=member_id)
+    member = get_object_or_404(Member, id=member_id)
+    user_mem, _ = UserMemory.objects.get_or_create(user=member) 
     user_mem.memory_json = learner.dump_memory()
     user_mem.save()
 
@@ -131,3 +145,15 @@ def create_list(request, count):
                 )
                     
         return redirect("user_page")
+def delete_list(request, list_id):
+    if request.method == "POST":
+        member_id = request.session.get("member_id")
+
+        member = get_object_or_404(Member, id=member_id)
+        deck = get_object_or_404(VocabularyList, id=list_id, user=member)
+        name = deck.list_name
+        deck.delete()
+
+        messages.success(request, f'"{name}" deleted.')
+
+    return redirect("user_page")

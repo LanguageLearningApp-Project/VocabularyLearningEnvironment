@@ -24,7 +24,17 @@
     {% for deck in user_decks %}
       <div class="deck-card" data-deck-id="{{ deck.id }}">
         <h3>{{ deck.list_name }}</h3>
-        <button class="deck-btn" data-deck-id="{{ deck.id }}">Open</button>
+  
+        <div class="deck-actions">
+          <button class="deck-btn" data-deck-id="{{ deck.id }}">Open</button>
+  
+          <form method="post" action="{% url 'delete_list' deck.id %}" class="delete-form">
+            {% csrf_token %}
+            <button type="submit" class="delete-btn" aria-label="Delete {{ deck.list_name }}">
+              Delete
+            </button>
+          </form>
+        </div>
       </div>
     {% endfor %}
 
@@ -155,6 +165,15 @@
     btn.addEventListener('click', ()=>{
       const deckId = btn.dataset.deckId;
       window.location.href = `{% url 'home' %}?deck_id=${deckId}`;
+    });
+  });
+
+  document.querySelectorAll('form.delete-form').forEach(form=>{
+    form.addEventListener('submit', (e)=>{
+      const title = form.closest('.deck-card').querySelector('h3')?.textContent?.trim() || 'this deck';
+      if(!confirm(`Delete "${title}"? This cannot be undone.`)){
+        e.preventDefault();
+      }
     });
   });
 </script>
