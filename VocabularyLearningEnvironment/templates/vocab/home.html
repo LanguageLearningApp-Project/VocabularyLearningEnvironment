@@ -98,7 +98,7 @@ const urlParams = new URLSearchParams(window.location.search);
 const currentDeckId = urlParams.get('deck_id');
 
 if (currentDeckId) {
-    loadWord(currentDeckId); // deckId ile ilk kelimeyi yükle
+    loadWord(currentDeckId); 
 }
 
 async function loadWord(deckId) {

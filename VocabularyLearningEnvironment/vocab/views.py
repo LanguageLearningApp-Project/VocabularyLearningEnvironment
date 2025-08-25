@@ -19,29 +19,6 @@ def user_page(request):
     user_decks = VocabularyList.objects.filter(user=member)
     username = request.session.get("member_username")
 
-    if not user_decks.exists():
-        next_number = 1
-        name = f"Deck {next_number}"
-        desc = "Automatically created"
-
-        deck = VocabularyList.objects.create(
-            user=member,
-            list_name=name,
-            description=desc
-        )
-
-        word_items = planner.load_chosen_words(10)
-        for item in word_items:
-            Vocabulary.objects.create(
-                source_word=item.source,
-                target_word=item.target,
-                source_language="en",
-                target_language="de",
-                vocabulary_list=deck
-            )
-
-        user_decks = [deck]
-
     return render(
         request,
         "vocab/user_page.html",
@@ -145,6 +122,7 @@ def create_list(request, count):
                 )
                     
         return redirect("user_page")
+
 def delete_list(request, list_id):
     if request.method == "POST":
         member_id = request.session.get("member_id")
