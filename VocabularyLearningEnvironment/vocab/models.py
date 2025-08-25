@@ -30,10 +30,11 @@ class Vocabulary(models.Model):
     
 
 class UserAnswer(models.Model):
-    question = models.ForeignKey(Vocabulary, on_delete=models.CASCADE, null=True, blank=True)
-    user = models.ForeignKey(Member, on_delete=models.CASCADE, null=True, blank=True)
+    question = models.ForeignKey(Vocabulary, on_delete=models.CASCADE, related_name="answers")
+    user = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="answers")
     given_answer = models.CharField(max_length=100)
-    answer_time = models.DateTimeField(auto_now_add=True)
+    #response_time = models.IntegerField() 
+    #is_correct = models.BooleanField(default=False)
 
     def __str__(self):
         return "User " + str(self.user_id) + " - Question " + str(self.question_id)
