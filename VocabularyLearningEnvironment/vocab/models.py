@@ -1,5 +1,14 @@
 from django.db import models
 
+class VocabularyList(models.Model):
+    list_name = models.CharField(max_length=100)
+    description = models.CharField(max_length=200)
+    user_id = models.IntegerField(default=0)
+
+
+    def __str__(self):
+        return self.list_name
+
 class Vocabulary(models.Model):
     source_word = models.CharField(max_length=100)
     target_word = models.CharField(max_length=100)
@@ -9,7 +18,7 @@ class Vocabulary(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     vocabulary_list_id = models.IntegerField(default=0)
-
+    
     def __str__(self):
         return self.source_word + "->" + self.target_word
     
@@ -20,14 +29,6 @@ class Member(models.Model):
     def __str__(self):
         return self.user_name
 
-class VocabularyList(models.Model):
-    list_name = models.CharField(max_length=100)
-    description = models.CharField(max_length=200)
-    user_id = models.IntegerField(default=0)
-
-
-    def __str__(self):
-        return self.list_name
 
 class userAnswer(models.Model):
     question_id = models.IntegerField(default=0)
