@@ -4,7 +4,7 @@ from components.teacher.items import WordItem
 from components.learners.exp_memory import ExpMemoryLearner
 from components.teacher.planners import RandomPlanner 
 from .forms import MemberForm
-from .models import Member, UserMemory, Vocabulary, VocabularyList
+from .models import Member, UserAnswer, UserMemory, Vocabulary, VocabularyList
 from django.contrib import messages
 from django.shortcuts import redirect
 
@@ -34,9 +34,12 @@ def random_word_view(request, deck_id):
     deck = Vocabulary.objects.filter(vocabulary_list__id=deck_id)
     
     item_list = []
+    vocab_dict = {}
 
     for vocab in deck:
-        item_list.append(WordItem(source = vocab.source_word, target = vocab.target_word))
+        word_item = WordItem(source = vocab.source_word, target = vocab.target_word)
+        item_list.append(word_item)
+        vocab_dict[word_item] = vocab
 
     learner_memory = request.session.get("learner_memory", "{}")
     learner = ExpMemoryLearner(alpha=0.1, beta=0.5)
@@ -46,6 +49,8 @@ def random_word_view(request, deck_id):
     question = chosen_item.get_question()
     translation = chosen_item.get_answer()
     
+    chosen_vocab = vocab_dict[chosen_item]
+
     learner.learn(chosen_item, time=0)
 
     request.session["learner_memory"] = learner.dump_memory()
@@ -54,7 +59,7 @@ def random_word_view(request, deck_id):
     user_mem.memory_json = learner.dump_memory()
     user_mem.save()
 
-    return JsonResponse({"word": question, "translation": translation})
+    return JsonResponse({"word": question, "translation": translation, "question_id": chosen_vocab.id})
 
 def login(request):
     if request.method =="POST":
@@ -135,3 +140,28 @@ def delete_list(request, list_id):
         messages.success(request, f'"{name}" deleted.')
 
     return redirect("user_page")
+
+def submit_answer(request):
+    if request.method == "POST":
+        user_id = request.session.get("member_id")
+        question_id = request.POST.get("question_id")
+        given_answer = request.POST.get("given_answer")
+
+        if user_id and question_id and given_answer:
+            try:
+                user = Member.objects.get(id=user_id)
+                question = Vocabulary.objects.get(id=question_id)
+
+                user_answer = UserAnswer.objects.create(
+                    user=user,
+                    question=question,
+                    given_answer=given_answer
+                )
+
+                return JsonResponse({"status": "ok", "saved_id": user_answer.id})
+            except Member.DoesNotExist:
+                return JsonResponse({"status": "error", "message": "User not found"})
+            except Vocabulary.DoesNotExist:
+                return JsonResponse({"status": "error", "message": "Question not found"})
+
+    return JsonResponse({"status": "error", "message": "Invalid request"})

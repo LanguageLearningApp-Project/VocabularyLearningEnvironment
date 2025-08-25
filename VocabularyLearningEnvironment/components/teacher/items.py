@@ -29,3 +29,6 @@ class WordItem(TeachingItem):
 
     def is_answer_correct(self, answer: str) -> bool:
         return self.target.strip().lower() == answer.strip().lower()
+
+    def __hash__(self):
+        return hash((self.source, self.target))

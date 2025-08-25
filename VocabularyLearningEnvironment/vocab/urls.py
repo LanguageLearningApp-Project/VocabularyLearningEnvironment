@@ -11,4 +11,5 @@ urlpatterns = [
     path('join/', views.join, name="join"),
     path('create_list/<int:count>/', views.create_list, name="create_list"),
     path("delete_list/<int:list_id>/", views.delete_list, name="delete_list"),
+    path('submit-answer/', views.submit_answer, name='submit_answer'),
 ]

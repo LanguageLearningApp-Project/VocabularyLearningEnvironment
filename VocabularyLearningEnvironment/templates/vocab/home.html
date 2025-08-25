@@ -17,7 +17,7 @@
             Question goes here..
     </div>
 
-    <input id="answer" type="text" placeholder="Type your answer…"
+    <input id="answer" name="given_answer" type="text" placeholder="Type your answer…"
         style="font-size:18px; width:300px; padding:8px; border:2px solid #2d6aa6; border-radius:8px; margin-top:20px;">
 
     <div class="btn-row">
@@ -86,6 +86,7 @@ const nextBtn  = document.getElementById("next");
 const checkBtn = document.getElementById("check");
 
 let currentTranslation = "";
+let currentQuestionId = null;
 
 const progressEl = document.getElementById("progress") || (() => {
   const p = document.createElement("p");
@@ -96,6 +97,26 @@ const progressEl = document.getElementById("progress") || (() => {
 
 const urlParams = new URLSearchParams(window.location.search);
 const currentDeckId = urlParams.get('deck_id');
+const csrftoken = '{{ csrf_token }}';
+
+async function submitAnswer(questionId, givenAnswer) {
+    try {
+        const formData = new FormData();
+        formData.append('question_id', questionId);
+        formData.append('given_answer', givenAnswer);
+        formData.append('csrfmiddlewaretoken', csrftoken);
+
+        const response = await fetch('/submit-answer/', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+        console.log('Answer saved:', result);
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
 
 if (currentDeckId) {
     loadWord(currentDeckId); 
@@ -110,18 +131,23 @@ async function loadWord(deckId) {
     <em style="color: gray;">${data.translation || "(no translation)"}</em>
   `;
   currentTranslation = (data.translation || "").trim();
+  currentQuestionId = data.question_id;
   answerEl.style.backgroundColor = "";
-
-  
-  } catch (e) {
+  } 
+  catch (e) {
     box.textContent = "Could not load word ";
     console.error(e);
   }
 }
 
 
-checkBtn.addEventListener("click", () => {
+checkBtn.addEventListener("click", async () => {
   const val = answerEl.value.trim();
+
+  if (currentQuestionId && val) {
+    await submitAnswer(currentQuestionId, val);
+  }
+  
   if (val.toLowerCase() === currentTranslation.toLowerCase()) {
     
     answerEl.style.backgroundColor = "rgba(154, 255, 154, 0.6)"; 
