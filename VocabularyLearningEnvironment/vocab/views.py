@@ -7,6 +7,7 @@ from .forms import MemberForm
 from .models import Member, UserAnswer, UserMemory, Vocabulary, VocabularyList
 from django.contrib import messages
 from django.shortcuts import redirect
+from django.utils import timezone
 
 planner = RandomPlanner()
 
@@ -41,7 +42,7 @@ def random_word_view(request, deck_id):
         item_list.append(word_item)
         vocab_dict[word_item] = vocab
 
-    learner_memory = request.session.get("learner_memory", "{}")
+    learner_memory = request.session.get("learner_memory") or {}
     learner = ExpMemoryLearner(alpha=0.1, beta=0.5)
     learner.load_memory(learner_memory)
 
@@ -51,7 +52,8 @@ def random_word_view(request, deck_id):
     
     chosen_vocab = vocab_dict[chosen_item]
 
-    learner.learn(chosen_item, time=0)
+    now_minutes = int(timezone.now().timestamp() // 60)
+    learner.learn(chosen_item, time=now_minutes)
 
     request.session["learner_memory"] = learner.dump_memory()
     member = get_object_or_404(Member, id=member_id)
