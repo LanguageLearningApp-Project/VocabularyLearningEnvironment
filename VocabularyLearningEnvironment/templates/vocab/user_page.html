@@ -4,7 +4,15 @@
 
 {% block content %}
 <div class="user_page_container">
-
+  
+  <div class="d-flex justify-content-end p-2">
+    {% if request.session.member_id %}
+        <small>
+        {{ request.session.member_username }} |
+        <a href="{% url 'logout' %}">Logout</a>
+        </small>
+    {% endif %}
+</div>
   <h1>Welcome, {{ username }}!</h1>
   
   <div class="create_deck_card">
