@@ -22,7 +22,7 @@
 
     <div class="btn-row">
         <button id="check" class="btn">Check Answer</button>
-        <button id="next"  class="btn">Next</button>
+        <button id="next"  class="btn">Quit</button>
     </div>
 
     <pre id="out" style="margin:8px 0 0; font-size:16px;"></pre>
@@ -166,7 +166,11 @@ checkBtn.addEventListener("click", async () => {
       loadWord(currentDeckId);
     }, 500);
   }
-  
+
+});
+
+nextBtn.addEventListener("click", () => {
+  window.location.href = "{% url 'user_page' %}";
 });
 
 </script>
