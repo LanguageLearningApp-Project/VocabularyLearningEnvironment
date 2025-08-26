@@ -25,27 +25,35 @@ class RandomPlanner(Planner):
         return random.choice(material)
     
     def choose_multiple(self, count):
-        words = top_n_list(self.lang, self.top)[self.skip:]
+        words = top_n_list(self.lang, self.top)[self.skip:5000]
+
         return random.sample(words, count)
 
     def load_chosen_words(self, count):
-        chosen_words = self.choose_multiple(count*2)
+        chosen_words = self.choose_multiple(count * 4)  # oversample
         teaching_items = []
+        seen = set()
 
         for word in chosen_words:
             word_clean = self.clean_word(word)
             if not word_clean:
                 continue
-            if not self.is_valid_word(word_clean):
+
+            lemma = self.is_valid_word(word_clean)
+            if not lemma or lemma in seen:
                 continue
-            
-            teaching_items.append(WordItem(source = word_clean, target = self.get_translation(word_clean, "en", "de")))
+
+            seen.add(lemma)
+            teaching_items.append(
+                WordItem(source=lemma, target=self.get_translation(lemma, "en", "de"))
+            )
+
             if len(teaching_items) == count:
-                break 
+                break
 
         return teaching_items
     
-    def clean_translation(text: str):
+    def clean_translation(self, text: str):
         if not text:
             return ""
         cleaned = text.replace("*", "")
@@ -81,8 +89,15 @@ class RandomPlanner(Planner):
             return word_clean if word_clean else None
 
     def is_valid_word(self, word: str):
+        if len(word) < 3:
+            return None
+        if word.lower() in nlp.Defaults.stop_words:
+            return None
+
         doc = nlp(word)
         for token in doc:
-            if token.pos_ in ["NOUN", "VERB", "ADJ"]:
-                return True
-        return False
+            if token.pos_ in {"NOUN", "VERB", "ADJ"} and not token.is_stop and token.pos_ != "PROPN":
+                lemma = token.lemma_.lower()
+                if len(lemma) >= 3:
+                    return lemma
+        return None
