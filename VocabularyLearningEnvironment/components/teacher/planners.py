@@ -9,7 +9,6 @@ import random
 from vocab.models import Vocabulary
 import spacy
 import re
-import json
 
 nlp = spacy.load("en_core_web_md")
 
