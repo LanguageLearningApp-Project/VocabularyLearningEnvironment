@@ -24,6 +24,7 @@
     {% for deck in user_decks %}
       <div class="deck-card" data-deck-id="{{ deck.id }}">
         <h3>{{ deck.list_name }}</h3>
+        <h4>{{ deck.description }}</h4>
   
         <div class="deck-actions">
           <button class="deck-btn" data-deck-id="{{ deck.id }}">Open</button>
@@ -84,13 +85,20 @@
     box-shadow:0 10px 26px rgba(0,0,0,.14);
   }
   .deck-card h3{
-    margin:0 0 16px;
+    margin:0 0 1px;
     color:#1e4eb6;
-    font-size:1.45rem;
+    font-size:1.47rem;
     font-weight:800;
     line-height:1.2;
   }
 
+  .deck-card h4{
+    margin:0 0 16px;
+    color:#031e5c;
+    font-size: 0.9rem;
+    font-weight:470;
+    line-height:1.2;
+  }
   .deck-btn{
     padding:12px 16px;
     border:none;
