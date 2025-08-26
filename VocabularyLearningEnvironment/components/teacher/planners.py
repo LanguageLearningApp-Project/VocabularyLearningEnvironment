@@ -11,7 +11,7 @@ import spacy
 import re
 import json
 
-nlp = spacy.load("en_core_web_sm")
+nlp = spacy.load("en_core_web_md")
 
 class RandomPlanner(Planner):
 
@@ -45,12 +45,14 @@ class RandomPlanner(Planner):
                 break 
 
         return teaching_items
+    
     def clean_translation(text: str):
         if not text:
             return ""
         cleaned = text.replace("*", "")
         cleaned = re.sub(r"\s+", " ", cleaned).strip()
-        return cleaned
+        first_word = re.split(r"[,/]", cleaned)[0].strip()
+        return first_word
     
     def get_translation(self, word: str, src: str = "en", tgt: str = "de"):
         try:
@@ -68,7 +70,7 @@ class RandomPlanner(Planner):
             if "*" in raw:
                 cleaned = self.clean_translation(raw)
             else:
-                cleaned = raw
+                cleaned = re.split(r"[,/]", raw)[0].strip()
 
             return cleaned or ""
         except Exception:
