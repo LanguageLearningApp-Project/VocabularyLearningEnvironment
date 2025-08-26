@@ -52,7 +52,7 @@ def random_word_view(request, deck_id):
     
     chosen_vocab = vocab_dict[chosen_item]
 
-    now_minutes = int(timezone.now().timestamp() // 60)
+    now_minutes = int(timezone.now().timestamp() // 360)
     learner.learn(chosen_item, time=now_minutes)
 
     request.session["learner_memory"] = learner.dump_memory()
