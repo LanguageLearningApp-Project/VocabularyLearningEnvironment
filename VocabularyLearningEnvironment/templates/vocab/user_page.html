@@ -53,8 +53,55 @@
         </div>
       </div>
     {% endfor %}
-  
-    
+  </div>
+
+  <hr style="margin: 32px 0; opacity:.3;">
+
+  <div class="create_deck_card">
+    <form method="post" action="">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="create_session">
+
+      <h2 style="margin:6px 0 12px; color:#1e4eb6;">Create Study Session</h2>
+
+      <div class="deck_inputs">
+        {{ session_form.non_field_errors }}
+        {{ session_form.name.errors }}{{ session_form.name }}
+        {{ session_form.vocabulary_list.errors }}{{ session_form.vocabulary_list }}
+        {{ session_form.goal_type.errors }}{{ session_form.goal_type }}
+        {{ session_form.goal_value.errors }}{{ session_form.goal_value }}
+        {{ session_form.start_date.errors }}{{ session_form.start_date }}
+        {{ session_form.end_date.errors }}{{ session_form.end_date }}
+        {% if session_form.auto_goal %}
+          <label style="width:100%; margin-top:6px;">
+            {{ session_form.auto_goal }} Auto-calc daily goal
+          </label>
+        {% endif %}
+        <label style="width:100%; margin-top:6px;">
+          {{ session_form.is_active }} Active
+        </label>
+      </div>
+
+      <button class="create_button" type="submit">Create Session</button>
+    </form>
+  </div>
+
+  <div class="deck-container">
+    {% for s in sessions %}
+      <div class="deck-card">
+        <h3>{{ s.name }}</h3>
+        <h4>
+          Deck: {{ s.vocabulary_list.list_name }}<br>
+          {{ s.start_date }} → {{ s.end_date }}<br>
+          Goal: {{ s.get_goal_type_display }} = {{ s.goal_value }}
+        </h4>
+        <div class="deck-actions">
+          <a href="{% url 'home' %}?deck_id={{ s.vocabulary_list.id }}&session_id={{ s.id }}" class="deck-btn">Study</a>
+        </div>
+      </div>
+    {% empty %}
+      <p>No study sessions yet.</p>
+    {% endfor %}
   </div>
 </div>
 {% endblock %}
@@ -212,6 +259,80 @@
     font-weight:700;
   }
   .delete-btn:hover{ background:#be123c; }
+
+  .create_session_card {
+    background:#ffffff;
+    display: flex;
+    justify-content: center;
+    margin: 20px auto;
+    border-radius:14px;
+    box-shadow:0 6px 40px rgba(0,0,0,.25);
+    padding:20px;
+    width:525px;
+    text-align:center;
+    transition:transform .18s ease, box-shadow .18s ease;
+}
+
+.create_session_card h2 {
+    color:#1e4eb6;
+    font-size:1.3rem;
+    font-weight:700;
+    margin-bottom:12px;
+}
+
+.session_inputs {
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:8px;
+    margin-bottom:12px;
+}
+
+.session_inputs input,
+.session_inputs select {
+    font-size:16px;
+    width:235px;
+    padding:8px;
+    border:2px solid #2d6aa6;
+    background-color:#d3e2f1;
+    border-radius:8px;
+    margin:0;
+}
+
+.session_inputs label {
+    font-size:0.9rem;
+    color:#031e5c;
+    width:100%;
+    text-align:left;
+    margin-top:4px;
+}
+
+.session-card {
+    background:#fff;
+    border-radius:14px;
+    box-shadow:0 6px 20px rgba(0,0,0,.10);
+    padding:20px;
+    width:260px;
+    text-align:center;
+    transition:transform .18s ease, box-shadow .18s ease;
+}
+.session-card:hover {
+    transform:translateY(-3px);
+    box-shadow:0 10px 26px rgba(0,0,0,.14);
+}
+.session-card h3 {
+    margin:0 0 6px;
+    color:#1e4eb6;
+    font-size:1.2rem;
+    font-weight:700;
+}
+.session-card h4 {
+    margin:0 0 12px;
+    color:#031e5c;
+    font-size:0.85rem;
+    font-weight:450;
+    line-height:1.3;
+}
 </style>
 {% endblock %}
 
