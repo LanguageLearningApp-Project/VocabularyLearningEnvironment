@@ -29,6 +29,7 @@ def user_page(request):
     member_id = request.session.get("member_id")
     member = get_object_or_404(Member, id=member_id)
     username = request.session.get("member_username")
+    public_decks = VocabularyList.objects.filter(is_public=True).exclude(user=member)
 
     user_decks = VocabularyList.objects.filter(user=member)
     public_decks = VocabularyList.objects.filter(is_public=True).exclude(user=member)
@@ -53,6 +54,7 @@ def user_page(request):
             "username": username,
             "all_decks": all_decks,
             "user_decks": user_decks,
+            "public_decks": public_decks,
             "session_form": session_form,
             "sessions": sessions,
         }

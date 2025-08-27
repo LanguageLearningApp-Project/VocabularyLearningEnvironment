@@ -35,11 +35,20 @@
       </form>
   </div>
 
+  <h2 class="section-title">My Vocabulary Lists</h2>
   <div class="deck-container">
     {% for deck in user_decks %}
       <div class="deck-card" data-deck-id="{{ deck.id }}">
         <h3>{{ deck.list_name }}</h3>
         <h4>{{ deck.description }}</h4>
+        
+        <div class="deck-status">
+          {% if deck.is_public %}
+            <span class="status-badge public-badge">Public</span>
+          {% else %}
+            <span class="status-badge private-badge">Private</span>
+          {% endif %}
+        </div>
   
         <div class="deck-actions">
           <button class="deck-btn" data-deck-id="{{ deck.id }}">Open</button>
@@ -52,9 +61,33 @@
           </form>
         </div>
       </div>
+    {% empty %}
+      <p class="no-items-message">You haven't created any vocabulary lists yet.</p>
     {% endfor %}
     
   </div>
+
+  {% if public_decks %}
+  <hr style="margin: 40px 0; opacity:.3;">
+  <h2 class="section-title">Public Vocabulary Lists</h2>
+  <div class="deck-container">
+    {% for deck in public_decks %}
+      <div class="deck-card public-deck-card" data-deck-id="{{ deck.id }}">
+        <h3>{{ deck.list_name }}</h3>
+        <h4>{{ deck.description }}</h4>
+        
+        <div class="deck-creator">
+          <span class="creator-info">Created by: {{ deck.user.user_name }}</span>
+          <span class="vocab-count">{{ deck.vocabularies.count }} words</span>
+        </div>
+  
+        <div class="deck-actions">
+          <button class="deck-btn" data-deck-id="{{ deck.id }}">Study</button>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
 
   <hr style="margin: 32px 0; opacity:.3;">
 
@@ -87,6 +120,7 @@
     </form>
   </div>
 
+  <h2 class="section-title">Study Sessions</h2>
   <div class="deck-container">
     {% for s in sessions %}
       <div class="deck-card">
@@ -101,7 +135,7 @@
         </div>
       </div>
     {% empty %}
-      <p>No study sessions yet.</p>
+      <p class="no-items-message">No study sessions yet.</p>
     {% endfor %}
   </div>
 </div>
@@ -128,11 +162,26 @@
     text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
   }
 
+  .section-title {
+    color:#1e4eb6;
+    font-size:1.5rem;
+    margin: 30px 0 20px;
+    font-weight:700;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+  }
+
+  .no-items-message {
+    color: #666;
+    font-style: italic;
+    margin: 20px 0;
+  }
+
   .deck-container{
     display:flex;
     flex-wrap:wrap;
     gap:32px;
     justify-content:center;
+    margin-bottom: 20px;
   }
 
   .deck-card{
@@ -148,6 +197,12 @@
     transform:translateY(-3px);
     box-shadow:0 10px 26px rgba(0,0,0,.14);
   }
+
+  .public-deck-card {
+    border: 2px solid #3b82f6;
+    background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
+  }
+
   .deck-card h3{
     margin:0 0 1px;
     color:#1e4eb6;
@@ -163,6 +218,49 @@
     font-weight:470;
     line-height:1.2;
   }
+
+  .deck-status {
+    margin: 8px 0;
+  }
+
+  .status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .public-badge {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+  }
+
+  .private-badge {
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+  }
+
+  .deck-creator {
+    margin: 12px 0;
+    font-size: 0.8rem;
+  }
+
+  .creator-info {
+    display: block;
+    color: #374151;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  .vocab-count {
+    display: block;
+    color: #6b7280;
+    font-style: italic;
+  }
+
   .deck-btn{
     padding:12px 16px;
     border:none;
@@ -171,6 +269,8 @@
     color:#fff;
     cursor:pointer;
     font-weight:700;
+    text-decoration: none;
+    display: inline-block;
   }
   .deck-btn:hover{ background:#1e4eb6; }
 
