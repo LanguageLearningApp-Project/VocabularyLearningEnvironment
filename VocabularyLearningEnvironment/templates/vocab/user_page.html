@@ -24,7 +24,13 @@
         <div class="deck_inputs">
             <input class="name_deck_input" type="text" name="list_name" placeholder="Deck name" required>
             <input class="desc_deck_input" type="text" name="description" placeholder="Description">
-        </div>  
+        </div> 
+
+        <div class="public-checkbox">
+            <label>
+                <input type="checkbox" name="is_public"> Make this deck public
+            </label>
+        </div>
  
       </form>
   </div>
@@ -129,9 +135,26 @@
     box-shadow:0 6px 40px rgba(0,0,0,.35);
     padding:20px;
     width:525px;
+    min-height: 150px; 
     text-align:center;
     transition:transform .18s ease, box-shadow .18s ease;
+    position: relative;
   } 
+  .create_deck_card .public-checkbox {
+    margin-top: auto; 
+    position: absolute;
+    bottom: 2px;
+    right: 20px;
+    color: #10204d; 
+    font-weight: 460;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+
+  .create_deck_card .public-checkbox input[type="checkbox"] {
+    accent-color: #1e3a8a;
+    margin-right: 2px; 
+  }
 
   .create_button{
     border:none;
@@ -168,7 +191,7 @@
     border:2px solid #2d6aa6; 
     background-color:#d3e2f1;
     border-radius:8px; 
-    margin: 0;
+    margin: 10;
     display: block;
   }
 

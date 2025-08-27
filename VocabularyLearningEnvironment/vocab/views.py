@@ -107,27 +107,37 @@ def join(request):
     
 def create_list(request, count):
     if request.method == "POST":
-        member = Member.objects.get(id=request.session.get("member_id"))
-        if member:
+        current_member = Member.objects.get(id=request.session.get("member_id"))
+
+        if current_member:
             list_name = request.POST.get("list_name")
             description = request.POST.get("description")
-            
-            new_deck = VocabularyList.objects.create(
-                list_name=list_name,
-                description=description,
-                user=member
-            )
+            is_public = request.POST.get("is_public")
+
+            if(is_public):
+                members = Member.objects.all()
+            else:
+                members = [current_member]
 
             word_items = planner.load_chosen_words(count)
-            for item in word_items:
-                Vocabulary.objects.create(
-                    source_word=item.source,
-                    target_word=item.target,
-                    source_language="en",
-                    target_language="de",
-                    vocabulary_list=new_deck
+
+            for member in members:
+                new_deck = VocabularyList.objects.create(
+                    list_name=list_name,
+                    description=description,
+                    user=member,
+                    is_public=bool(is_public)
                 )
-                    
+
+                for item in word_items:
+                    Vocabulary.objects.create(
+                        source_word=item.source,
+                        target_word=item.target,
+                        source_language="en",
+                        target_language="de",
+                        vocabulary_list=new_deck
+                    )
+                        
         return redirect("user_page")
 
 def delete_list(request, list_id):
