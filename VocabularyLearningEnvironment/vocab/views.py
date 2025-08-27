@@ -8,8 +8,19 @@ from .models import Member, UserAnswer, UserMemory, Vocabulary, VocabularyList
 from django.contrib import messages
 from django.shortcuts import redirect
 from django.utils import timezone
+import unicodedata, re
+from django.views.decorators.http import require_POST
+from django.db import transaction
 
 planner = RandomPlanner()
+
+
+def _normalize(s: str):
+    if not s:
+        return ""
+    s = unicodedata.normalize("NFKC", s).strip()
+    s = re.sub(r"\s+", " ", s)
+    return s.casefold()
 
 def main_page(request):
     return render(request, "vocab/main_page.html")
@@ -52,8 +63,8 @@ def random_word_view(request, deck_id):
     
     chosen_vocab = vocab_dict[chosen_item]
 
-    now_minutes = int(timezone.now().timestamp() )
-    learner.learn(chosen_item, time=now_minutes)
+    now_seconds = int(timezone.now().timestamp() )
+    learner.learn(chosen_item, time=now_seconds)
 
     request.session["learner_memory"] = learner.dump_memory()
     member = get_object_or_404(Member, id=member_id)
@@ -143,27 +154,45 @@ def delete_list(request, list_id):
 
     return redirect("user_page")
 
+def _is_correct(given: str, expected: str) -> bool:
+    g = _normalize(given)
+    e = _normalize(expected)
+    if g == e:
+        return True
+    # Optional: ignore punctuation for looser matches
+    rm = lambda x: re.sub(r"[^\w\s]", "", x)
+    return rm(g) == rm(e)
+
+@require_POST
 def submit_answer(request):
-    if request.method == "POST":
-        user_id = request.session.get("member_id")
-        question_id = request.POST.get("question_id")
-        given_answer = request.POST.get("given_answer")
+    user_id = request.session.get("member_id")
+    question_id = request.POST.get("question_id")
+    given_answer = request.POST.get("given_answer", "")
 
-        if user_id and question_id and given_answer:
-            try:
-                user = Member.objects.get(id=user_id)
-                question = Vocabulary.objects.get(id=question_id)
+    if not (user_id and question_id and given_answer):
+        return JsonResponse({"status": "error", "message": "Invalid request"})
 
-                user_answer = UserAnswer.objects.create(
-                    user=user,
-                    question=question,
-                    given_answer=given_answer
-                )
+    try:
+        user = Member.objects.get(id=user_id)
+        question = Vocabulary.objects.get(id=question_id)
+    except Member.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "User not found"})
+    except Vocabulary.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Question not found"})
 
-                return JsonResponse({"status": "ok", "saved_id": user_answer.id})
-            except Member.DoesNotExist:
-                return JsonResponse({"status": "error", "message": "User not found"})
-            except Vocabulary.DoesNotExist:
-                return JsonResponse({"status": "error", "message": "Question not found"})
+    expected = question.target_word  # or .source_word, depending on direction
+    correct = _is_correct(given_answer, expected)
 
-    return JsonResponse({"status": "error", "message": "Invalid request"})
+    with transaction.atomic():
+        user_answer = UserAnswer.objects.create(
+            user=user,
+            question=question,
+            given_answer=given_answer,
+            is_correct=correct,
+        )
+
+    return JsonResponse({
+        "status": "ok",
+        "saved_id": user_answer.id,
+        "is_correct": correct
+    })
