@@ -1,4 +1,6 @@
 import html
+import json
+import os
 import requests
 from .base import Planner
 from .planning_contexts import PlanningContext
@@ -14,10 +16,12 @@ nlp = spacy.load("en_core_web_md")
 
 class RandomPlanner(Planner):
 
-    def __init__(self, lang="en", top=5000, skip=200):
+    def __init__(self, lang="en", top=5000, skip=200, use_json=True):
         self.lang = lang
         self.top = top
         self.skip = skip
+        self.use_json = use_json
+        self.json_words = self.load_words_from_json()
         
     def choose_item(
         self, material: List[TeachingItem], context: PlanningContext, time: int
@@ -25,34 +29,71 @@ class RandomPlanner(Planner):
         return random.choice(material)
     
     def choose_multiple(self, count):
-        words = top_n_list(self.lang, self.top)[self.skip:5000]
+        if self.use_json and self.json_words: 
+            words = list(self.json_words.keys())
+        else:  
+            words = top_n_list(self.lang, self.top)[self.skip:5000]
 
-        return random.sample(words, count)
+        return random.sample(words, min(count, len(words)))
 
     def load_chosen_words(self, count):
-        chosen_words = self.choose_multiple(count * 4)  # oversample
+        
         teaching_items = []
         seen = set()
 
-        for word in chosen_words:
-            word_clean = self.clean_word(word)
-            if not word_clean:
-                continue
+        if self.use_json and self.json_words:
+            print("JSON’dan çekiliyor")   
+            words = list(self.json_words.items())  
+            chosen = random.sample(words, min(count * 4, len(words)))
 
-            lemma = self.is_valid_word(word_clean)
-            if not lemma or lemma in seen:
-                continue
+            for source, target in chosen:
+                word_clean = self.clean_word(source)
+                if not word_clean:
+                    continue
 
-            seen.add(lemma)
-            teaching_items.append(
-                WordItem(source=lemma, target=self.get_translation(lemma, "en", "de"))
-            )
+                lemma = self.is_valid_word(word_clean)
+                if not lemma or lemma in seen:
+                    continue
 
-            if len(teaching_items) == count:
-                break
+                seen.add(lemma)
+                teaching_items.append(WordItem(source=lemma, target=target))
+
+                if len(teaching_items) == count:
+                    break
+
+        else:
+            print("API’den çekiliyor")
+            chosen_words = self.choose_multiple(count * 4)  # oversample
+            for word in chosen_words:
+                word_clean = self.clean_word(word)
+                if not word_clean:
+                    continue
+
+                lemma = self.is_valid_word(word_clean)
+                if not lemma or lemma in seen:
+                    continue
+
+                seen.add(lemma)
+
+                teaching_items.append(
+                    WordItem(source=lemma, target=self.get_translation(lemma, "en", "de"))
+                )
+
+                if len(teaching_items) == count:
+                    break
 
         return teaching_items
     
+    def load_words_from_json(self):
+        file_path = os.path.join(os.path.dirname(__file__), "dictionary.json")
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return data   # direk dict döndürüyoruz
+        except Exception as e:
+            print(f"JSON load error: {e}")
+            return {}
+        
     def clean_translation(self, text: str):
         if not text:
             return ""

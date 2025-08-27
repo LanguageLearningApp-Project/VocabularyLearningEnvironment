@@ -14,7 +14,6 @@ from django.db import transaction
 
 planner = RandomPlanner()
 
-
 def _normalize(s: str):
     if not s:
         return ""
