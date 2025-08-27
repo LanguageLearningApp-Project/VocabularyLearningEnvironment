@@ -28,8 +28,10 @@ def main_page(request):
 def user_page(request):
     member_id = request.session.get("member_id")
     member = get_object_or_404(Member, id=member_id)
-    user_decks = VocabularyList.objects.filter(user=member)
     username = request.session.get("member_username")
+
+    user_decks = VocabularyList.objects.filter(user=member)
+    public_decks = VocabularyList.objects.filter(is_public=True).exclude(user=member)
 
     if request.method == "POST" and request.POST.get("form_type") == "create_session":
         session_form = StudySessionForm(request.POST, user=member)
@@ -49,12 +51,28 @@ def user_page(request):
         "vocab/user_page.html",
         {
             "username": username,
+            "all_decks": all_decks,
             "user_decks": user_decks,
             "session_form": session_form,
             "sessions": sessions,
         }
     )
 
+def get_public_decks(request):
+    member_id = request.session.get("member_id")
+    member = get_object_or_404(Member, id=member_id)
+    public_decks = VocabularyList.objects.filter(is_public=True).exclude(user=member)
+
+    decks_data = [
+        {
+            "id": deck.id,
+            "list_name": deck.list_name,
+            "description": deck.description,
+            "creator": deck.user.user_name,
+        }
+        for deck in public_decks
+    ]
+    return JsonResponse({"decks": decks_data})
 
 def home(request):
     return render(request, "vocab/home.html")
@@ -136,36 +154,29 @@ def join(request):
     
 def create_list(request, count):
     if request.method == "POST":
-        current_member = Member.objects.get(id=request.session.get("member_id"))
+        member = Member.objects.get(id=request.session.get("member_id"))
 
-        if current_member:
+        if member:
             list_name = request.POST.get("list_name")
             description = request.POST.get("description")
             is_public = request.POST.get("is_public")
 
-            if(is_public):
-                members = Member.objects.all()
-            else:
-                members = [current_member]
+            new_deck = VocabularyList.objects.create(
+                list_name=list_name,
+                description=description,
+                user=member,
+                is_public=bool(is_public)
+            )
 
             word_items = planner.load_chosen_words(count)
-
-            for member in members:
-                new_deck = VocabularyList.objects.create(
-                    list_name=list_name,
-                    description=description,
-                    user=member,
-                    is_public=bool(is_public)
+            for item in word_items:
+                Vocabulary.objects.create(
+                    source_word=item.source,
+                    target_word=item.target,
+                    source_language="en",
+                    target_language="de",
+                    vocabulary_list=new_deck
                 )
-
-                for item in word_items:
-                    Vocabulary.objects.create(
-                        source_word=item.source,
-                        target_word=item.target,
-                        source_language="en",
-                        target_language="de",
-                        vocabulary_list=new_deck
-                    )
                         
         return redirect("user_page")
 
@@ -325,3 +336,5 @@ def submit_answer_session(request):
         "saved_id": ua.id,
         "is_correct": correct,
     })
+
+
