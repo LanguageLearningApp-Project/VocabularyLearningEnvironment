@@ -30,6 +30,7 @@ def user_page(request):
     member = get_object_or_404(Member, id=member_id)
     user_decks = VocabularyList.objects.filter(user=member)
     username = request.session.get("member_username")
+    public_decks = VocabularyList.objects.filter(is_public=True).exclude(user=member)
 
     if request.method == "POST" and request.POST.get("form_type") == "create_session":
         session_form = StudySessionForm(request.POST, user=member)
@@ -50,6 +51,7 @@ def user_page(request):
         {
             "username": username,
             "user_decks": user_decks,
+            "public_decks": public_decks,
             "session_form": session_form,
             "sessions": sessions,
         }
@@ -143,29 +145,22 @@ def create_list(request, count):
             description = request.POST.get("description")
             is_public = request.POST.get("is_public")
 
-            if(is_public):
-                members = Member.objects.all()
-            else:
-                members = [current_member]
+            new_deck = VocabularyList.objects.create(
+                list_name=list_name,
+                description=description,
+                user=current_member, #the creator
+                is_public=bool(is_public)
+            )
 
             word_items = planner.load_chosen_words(count)
-
-            for member in members:
-                new_deck = VocabularyList.objects.create(
-                    list_name=list_name,
-                    description=description,
-                    user=member,
-                    is_public=bool(is_public)
+            for item in word_items:
+                Vocabulary.objects.create(
+                    source_word=item.source,
+                    target_word=item.target,
+                    source_language="en",
+                    target_language="de",
+                    vocabulary_list=new_deck
                 )
-
-                for item in word_items:
-                    Vocabulary.objects.create(
-                        source_word=item.source,
-                        target_word=item.target,
-                        source_language="en",
-                        target_language="de",
-                        vocabulary_list=new_deck
-                    )
                         
         return redirect("user_page")
 

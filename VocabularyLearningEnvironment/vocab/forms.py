@@ -1,5 +1,6 @@
 from django import forms
 from .models import Member, StudySession, VocabularyList
+from django.db.models import Q
 
 class MemberForm(forms.ModelForm):
   class Meta:
@@ -11,8 +12,11 @@ class StudySessionForm(forms.ModelForm):
         user = kwargs.pop("user", None) 
         super().__init__(*args, **kwargs)
         if user is not None:
-            self.fields["vocabulary_list"].queryset = VocabularyList.objects.filter(user=user)
-            
+            qs = VocabularyList.objects.filter(Q(user=user) | Q(is_public=True)).distinct()
+        else:
+            qs = VocabularyList.objects.filter(is_public=True)
+
+        self.fields["vocabulary_list"].queryset = qs
         self.fields["name"].widget.attrs["placeholder"] = "Session name"
         self.fields["goal_value"].widget.attrs["placeholder"] = "Goal value"
         self.fields["start_date"].widget.attrs["placeholder"] = "Start date"
