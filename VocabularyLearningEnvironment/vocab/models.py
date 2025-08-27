@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 class Member(models.Model):
     user_name = models.CharField(max_length=100, unique=True)
@@ -46,4 +47,36 @@ class UserMemory(models.Model):
 
     def __str__(self):
         return f"Memory of {self.user.user_name}"
+
+class StudySession(models.Model):
+    GOAL_TYPE_CHOICES = [
+        ("minutes_per_day", "Minutes per day"),
+        ("reviews_per_day", "Reviews per day"),
+    ]
+
+    user = models.ForeignKey("Member", on_delete=models.CASCADE, related_name="study_sessions")
+    vocabulary_list = models.ForeignKey("VocabularyList", on_delete=models.CASCADE, related_name="study_sessions")
+    name = models.CharField(max_length=120) 
+    goal_type = models.CharField(max_length=20, choices=GOAL_TYPE_CHOICES)
+    goal_value = models.PositiveIntegerField(default=20)
+
+    start_date = models.DateField(default=timezone.now)
+    end_date = models.DateField() 
+
+    memory_json = models.JSONField(default=dict, blank=True) 
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def days_total(self):
+        return (self.end_date - self.start_date).days + 1
+
+    def is_running_today(self):
+        today = timezone.localdate()
+        return self.is_active and self.start_date <= today <= self.end_date
+
+    def __str__(self):
+        return f"{self.name} ({self.user.user_name})"
+
 

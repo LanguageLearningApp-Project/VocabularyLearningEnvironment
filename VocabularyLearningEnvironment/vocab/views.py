@@ -1,16 +1,17 @@
 from django.shortcuts import get_object_or_404, redirect, render
-from django.http import JsonResponse
+from django.http import HttpResponseBadRequest, JsonResponse
 from components.teacher.items import WordItem
 from components.learners.exp_memory import ExpMemoryLearner
 from components.teacher.planners import RandomPlanner 
-from .forms import MemberForm
-from .models import Member, UserAnswer, UserMemory, Vocabulary, VocabularyList
+from .forms import MemberForm, StudySessionForm
+from .models import Member, UserAnswer, UserMemory, Vocabulary, VocabularyList, StudySession
 from django.contrib import messages
 from django.shortcuts import redirect
 from django.utils import timezone
 import unicodedata, re
 from django.views.decorators.http import require_POST
 from django.db import transaction
+
 
 planner = RandomPlanner()
 
@@ -31,10 +32,28 @@ def user_page(request):
     user_decks = VocabularyList.objects.filter(user=member)
     username = request.session.get("member_username")
 
+    if request.method == "POST" and request.POST.get("form_type") == "create_session":
+        session_form = StudySessionForm(request.POST, user=member)
+        if session_form.is_valid():
+            session = session_form.save(commit=False)
+            session.user = member
+            session.save()
+            messages.success(request, "Study session created.")
+            return redirect("user_page")
+    else:
+        session_form = StudySessionForm(user=member)
+
+    sessions = StudySession.objects.filter(user=member).order_by("-created_at")
+
     return render(
         request,
         "vocab/user_page.html",
-        {"username": username, "user_decks": user_decks}
+        {
+            "username": username,
+            "user_decks": user_decks,
+            "session_form": session_form,
+            "sessions": sessions,
+        }
     )
 
 
@@ -180,7 +199,7 @@ def submit_answer(request):
     except Vocabulary.DoesNotExist:
         return JsonResponse({"status": "error", "message": "Question not found"})
 
-    expected = question.target_word  # or .source_word, depending on direction
+    expected = question.target_word  
     correct = _is_correct(given_answer, expected)
 
     with transaction.atomic():
@@ -195,4 +214,105 @@ def submit_answer(request):
         "status": "ok",
         "saved_id": user_answer.id,
         "is_correct": correct
+    })
+
+def study_sessions(request):
+    member_id = request.session.get("member_id")
+    member = get_object_or_404(Member, id=member_id)
+
+    if request.method == "POST":
+        form = StudySessionForm(request.POST, user=member)
+        if form.is_valid():
+            session = form.save(commit=False)
+            session.user = member
+            session.save()
+            messages.success(request, "Study session created.")
+            return redirect("study_sessions")
+    else:
+        form = StudySessionForm(user=member)
+
+    sessions = StudySession.objects.filter(user=member).order_by("-created_at")
+    return render(request, "vocab/study_sessions.html", {"form": form, "sessions": sessions})
+
+def start_session(request, session_id):
+    member_id = request.session.get("member_id")
+    if not member_id:
+        return HttpResponseBadRequest("Not logged in")
+
+    member = get_object_or_404(Member, id=member_id)
+    session = get_object_or_404(StudySession, id=session_id, user=member)
+
+    deck_qs = Vocabulary.objects.filter(vocabulary_list=session.vocabulary_list)
+    if not deck_qs.exists():
+        return JsonResponse({"status": "error", "message": "This deck is empty."})
+
+    item_list, vocab_map = [], {}
+    for vocab in deck_qs:
+        wi = WordItem(source=vocab.source_word, target=vocab.target_word)
+        item_list.append(wi)
+        vocab_map[wi] = vocab
+
+    user_mem, _ = UserMemory.objects.get_or_create(user=member)
+    learner = ExpMemoryLearner(alpha=0.1, beta=0.5)
+    learner.load_memory(user_mem.memory_json or {})
+
+    now_seconds = int(timezone.now().timestamp())
+    chosen_item = planner.choose_item(item_list, context=None, time=now_seconds)
+    learner.learn(chosen_item, time=now_seconds)
+    
+    user_mem.memory_json = learner.dump_memory()
+    user_mem.save(update_fields=["memory_json"])
+
+    vocab_obj = vocab_map[chosen_item]
+    return JsonResponse({
+        "status": "ok",
+        "session_id": session.id,
+        "word": chosen_item.get_question(),
+        "translation": chosen_item.get_answer(),
+        "question_id": vocab_obj.id,
+    })
+
+
+@require_POST
+def submit_answer_session(request):
+    member_id = request.session.get("member_id")
+    if not member_id:
+        return JsonResponse({"status": "error", "message": "Not logged in"})
+
+    user = get_object_or_404(Member, id=member_id)
+
+    session_id = request.POST.get("session_id")
+    question_id = request.POST.get("question_id")
+    given_answer = request.POST.get("given_answer", "")
+
+    if not (session_id and question_id and given_answer):
+        return JsonResponse({"status": "error", "message": "Missing parameters"})
+
+    session = get_object_or_404(StudySession, id=session_id, user=user)
+    vocab = get_object_or_404(Vocabulary, id=question_id)
+
+    expected = vocab.target_word  
+    correct = _is_correct(given_answer, expected)
+
+    learner = ExpMemoryLearner(alpha=0.1, beta=0.5)
+    learner.load_memory(UserMemory or {})
+    now_seconds = int(timezone.now().timestamp())
+    try:
+        learner.learn(WordItem(vocab.source_word, vocab.target_word), time=now_seconds)
+    except Exception:
+        pass
+    UserMemory = learner.dump_memory()
+    session.save(update_fields=["memory_json"])
+
+    ua = UserAnswer.objects.create(
+        user=user,
+        question=vocab,
+        given_answer=given_answer,
+        is_correct=correct,
+    )
+
+    return JsonResponse({
+        "status": "ok",
+        "saved_id": ua.id,
+        "is_correct": correct,
     })
