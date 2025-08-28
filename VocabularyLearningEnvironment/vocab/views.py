@@ -11,6 +11,10 @@ from django.utils import timezone
 import unicodedata, re
 from django.views.decorators.http import require_POST
 from django.db import transaction
+from django.contrib.auth import authenticate, login 
+from django.contrib.auth import logout 
+from django.contrib.auth.decorators import login_required
+
 
 
 planner = RandomPlanner()
@@ -25,12 +29,10 @@ def _normalize(s: str):
 def main_page(request):
     return render(request, "vocab/main_page.html")
 
+@login_required
 def user_page(request):
-    member_id = request.session.get("member_id")
-    member = get_object_or_404(Member, id=member_id)
-    username = request.session.get("member_username")
-    public_decks = VocabularyList.objects.filter(is_public=True).exclude(user=member)
-
+    member = request.user
+    username = request.user.username
     user_decks = VocabularyList.objects.filter(user=member)
     public_decks = VocabularyList.objects.filter(is_public=True).exclude(user=member)
 
@@ -52,7 +54,6 @@ def user_page(request):
         "vocab/user_page.html",
         {
             "username": username,
-            "all_decks": all_decks,
             "user_decks": user_decks,
             "public_decks": public_decks,
             "session_form": session_form,
@@ -61,8 +62,7 @@ def user_page(request):
     )
 
 def get_public_decks(request):
-    member_id = request.session.get("member_id")
-    member = get_object_or_404(Member, id=member_id)
+    member = request.user
     public_decks = VocabularyList.objects.filter(is_public=True).exclude(user=member)
 
     decks_data = [
@@ -70,7 +70,7 @@ def get_public_decks(request):
             "id": deck.id,
             "list_name": deck.list_name,
             "description": deck.description,
-            "creator": deck.user.user_name,
+            "creator": deck.user.username,
         }
         for deck in public_decks
     ]
@@ -79,8 +79,9 @@ def get_public_decks(request):
 def home(request):
     return render(request, "vocab/home.html")
 
+@login_required
 def random_word_view(request, deck_id):
-    member_id = request.session.get("member_id")
+    member = request.user
     deck = Vocabulary.objects.filter(vocabulary_list__id=deck_id)
     
     item_list = []
@@ -105,59 +106,58 @@ def random_word_view(request, deck_id):
     learner.learn(chosen_item, time=now_seconds)
 
     request.session["learner_memory"] = learner.dump_memory()
-    member = get_object_or_404(Member, id=member_id)
+
     user_mem, _ = UserMemory.objects.get_or_create(user=member) 
     user_mem.memory_json = learner.dump_memory()
     user_mem.save()
 
     return JsonResponse({"word": question, "translation": translation, "question_id": chosen_vocab.id})
 
-def login(request):
+def login_view(request):
     if request.method =="POST":
-        user_name = request.POST.get("user_name")
+        username = request.POST.get("username")
         password = request.POST.get("password")
-        try:
-            member = Member.objects.get(user_name=user_name, password=password)
-            
-            request.session["member_id"] = member.id
-            request.session["member_username"] = member.user_name
 
-            user_mem, _ = UserMemory.objects.get_or_create(user=member)
-            learner = ExpMemoryLearner(alpha=0.1, beta=0.5)
-            learner.load_memory(user_mem.memory_json)
+        user = authenticate(request, username=username, password=password)
 
-            request.session["learner_memory"] = user_mem.memory_json  
-
+        if user:
+            login(request, user)  
+            messages.success(request, "Welcome back!")
             return redirect("user_page")
-        except:
+
+        else:
             messages.error(request, "Invalid username or password.")
             return render(request, "vocab/login.html", {})
-            
+
     else:
         return render (request, "vocab/login.html", {})
     
-def logout(request):
-    request.session.flush()
-    return redirect("main_page")                
+def logout_view(request):
+    logout(request)
+    messages.success(request, "Logged out successfully.")
+    return redirect("main_page")           
 
 def join(request):
-    if request.method =="POST":
-        form = MemberForm(request.POST or None)
-        user_name = request.POST.get("user_name")
-        if (form.is_valid() and not(Member.objects.filter(user_name=user_name).exists())):
-            form.save()
+    if request.method == "POST":
+        form = MemberForm(request.POST)
+        if form.is_valid():
+            member = form.save(commit=False)
+            member.set_password(form.cleaned_data['password'])
+            member.save()
+            
             messages.success(request, "Account created.")
             return redirect("login")
         else:
-            messages.error(request, "Username already taken.")
-            return redirect("join")
+            messages.error(request, "Username already taken or invalid form.")
+            return render(request, "vocab/join.html", {"form": form})
     else:
-        return render (request, "vocab/join.html", {})
-    
+        form = MemberForm()
+    return render(request, "vocab/join.html", {"form": form})
+
+@login_required
 def create_list(request, count):
     if request.method == "POST":
-        member = Member.objects.get(id=request.session.get("member_id"))
-
+        member = request.user
         if member:
             list_name = request.POST.get("list_name")
             description = request.POST.get("description")
@@ -182,11 +182,10 @@ def create_list(request, count):
                         
         return redirect("user_page")
 
+@login_required
 def delete_list(request, list_id):
     if request.method == "POST":
-        member_id = request.session.get("member_id")
-
-        member = get_object_or_404(Member, id=member_id)
+        member = request.user
         deck = get_object_or_404(VocabularyList, id=list_id, user=member)
         name = deck.list_name
         deck.delete()
@@ -205,19 +204,17 @@ def _is_correct(given: str, expected: str) -> bool:
     return rm(g) == rm(e)
 
 @require_POST
+@login_required
 def submit_answer(request):
-    user_id = request.session.get("member_id")
+    user = request.user
     question_id = request.POST.get("question_id")
     given_answer = request.POST.get("given_answer", "")
 
-    if not (user_id and question_id and given_answer):
+    if not (user and question_id and given_answer):
         return JsonResponse({"status": "error", "message": "Invalid request"})
 
     try:
-        user = Member.objects.get(id=user_id)
         question = Vocabulary.objects.get(id=question_id)
-    except Member.DoesNotExist:
-        return JsonResponse({"status": "error", "message": "User not found"})
     except Vocabulary.DoesNotExist:
         return JsonResponse({"status": "error", "message": "Question not found"})
 
@@ -238,9 +235,9 @@ def submit_answer(request):
         "is_correct": correct
     })
 
+@login_required
 def study_sessions(request):
-    member_id = request.session.get("member_id")
-    member = get_object_or_404(Member, id=member_id)
+    member = request.user
 
     if request.method == "POST":
         form = StudySessionForm(request.POST, user=member)
@@ -256,12 +253,12 @@ def study_sessions(request):
     sessions = StudySession.objects.filter(user=member).order_by("-created_at")
     return render(request, "vocab/study_sessions.html", {"form": form, "sessions": sessions})
 
+@login_required
 def start_session(request, session_id):
-    member_id = request.session.get("member_id")
-    if not member_id:
+    member = request.user
+    if not member:
         return HttpResponseBadRequest("Not logged in")
 
-    member = get_object_or_404(Member, id=member_id)
     session = get_object_or_404(StudySession, id=session_id, user=member)
 
     deck_qs = Vocabulary.objects.filter(vocabulary_list=session.vocabulary_list)
@@ -296,13 +293,9 @@ def start_session(request, session_id):
 
 
 @require_POST
+@login_required
 def submit_answer_session(request):
-    member_id = request.session.get("member_id")
-    if not member_id:
-        return JsonResponse({"status": "error", "message": "Not logged in"})
-
-    user = get_object_or_404(Member, id=member_id)
-
+    user = request.user
     session_id = request.POST.get("session_id")
     question_id = request.POST.get("question_id")
     given_answer = request.POST.get("given_answer", "")
@@ -316,15 +309,15 @@ def submit_answer_session(request):
     expected = vocab.target_word  
     correct = _is_correct(given_answer, expected)
 
+    user_mem, _ = UserMemory.objects.get_or_create(user=user)
     learner = ExpMemoryLearner(alpha=0.1, beta=0.5)
-    learner.load_memory(UserMemory or {})
+    learner.load_memory(user_mem.memory_json or {})
+
     now_seconds = int(timezone.now().timestamp())
-    try:
-        learner.learn(WordItem(vocab.source_word, vocab.target_word), time=now_seconds)
-    except Exception:
-        pass
-    UserMemory = learner.dump_memory()
-    session.save(update_fields=["memory_json"])
+    learner.learn(WordItem(vocab.source_word, vocab.target_word), time=now_seconds)
+
+    user_mem.memory_json = learner.dump_memory()
+    user_mem.save(update_fields=["memory_json"])
 
     ua = UserAnswer.objects.create(
         user=user,
@@ -339,4 +332,11 @@ def submit_answer_session(request):
         "is_correct": correct,
     })
 
+@login_required
+def reverse_privacy(request, deck_id):   
+    member = request.user
 
+    deck = get_object_or_404(VocabularyList, id=deck_id, user=member)
+    deck.is_public = not deck.is_public
+    deck.save()
+    return redirect('user_page')

@@ -41,8 +41,7 @@ class RandomPlanner(Planner):
         teaching_items = []
         seen = set()
 
-        if self.use_json and self.json_words:
-            print("JSON’dan çekiliyor")   
+        if self.use_json and self.json_words:  
             words = list(self.json_words.items())  
             chosen = random.sample(words, min(count * 4, len(words)))
 
@@ -62,7 +61,6 @@ class RandomPlanner(Planner):
                     break
 
         else:
-            print("API’den çekiliyor")
             chosen_words = self.choose_multiple(count * 4)  # oversample
             for word in chosen_words:
                 word_clean = self.clean_word(word)

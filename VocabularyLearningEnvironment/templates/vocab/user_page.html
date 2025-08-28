@@ -45,8 +45,16 @@
         <div class="deck-status">
           {% if deck.is_public %}
             <span class="status-badge public-badge">Public</span>
+            <form  method="post" action="{% url 'reverse_privacy' deck.id %}" class="privacy-form-inline">
+                {% csrf_token %}
+                <button class="reverse-privacy-button-public" type="submit" class="privacy-btn">Make Private</button>
+            </form>
           {% else %}
             <span class="status-badge private-badge">Private</span>
+            <form method="post" action="{% url 'reverse_privacy' deck.id %}" class="privacy-form-inline">
+                {% csrf_token %}
+                <button class="reverse-privacy-button-private" type="submit" class="privacy-btn">Make Public</button>
+            </form>
           {% endif %}
         </div>
   
@@ -221,6 +229,8 @@
 
   .deck-status {
     margin: 8px 0;
+    display: flex;
+    justify-content: center;
   }
 
   .status-badge {
@@ -242,6 +252,30 @@
     color: #374151;
     border: 1px solid #d1d5db;
   }
+
+  .reverse-privacy-button-public{
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: #d6dee0;
+    color: #10002d;
+    border: 1px solid #8e8e8e;
+    
+  }
+
+  .reverse-privacy-button-private{
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: #d6dee0;
+    color: #10002d;
+    border: 1px solid #8e8e8e;
+  }
+
 
   .deck-creator {
     margin: 12px 0;

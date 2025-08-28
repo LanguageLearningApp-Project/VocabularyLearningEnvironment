@@ -1,12 +1,12 @@
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth.models import AbstractUser
+from django.db import models
+from django.contrib.auth.hashers import make_password, check_password
+from django.utils import timezone
 
-class Member(models.Model):
-    user_name = models.CharField(max_length=100, unique=True)
-    password = models.CharField(max_length=50)
-    
-    def __str__(self):
-        return self.user_name
+class Member(AbstractUser):
+    pass
     
 class VocabularyList(models.Model):
     list_name = models.CharField(max_length=100)
@@ -47,7 +47,7 @@ class UserMemory(models.Model):
     memory_json = models.JSONField(default=dict)  
 
     def __str__(self):
-        return f"Memory of {self.user.user_name}"
+        return f"Memory of {self.user.username}"
 
 class StudySession(models.Model):
     GOAL_TYPE_CHOICES = [
@@ -78,6 +78,6 @@ class StudySession(models.Model):
         return self.is_active and self.start_date <= today <= self.end_date
 
     def __str__(self):
-        return f"{self.name} ({self.user.user_name})"
+        return f"{self.name} ({self.user.username})"
 
 

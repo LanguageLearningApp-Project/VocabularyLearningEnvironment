@@ -27,8 +27,12 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
 # Application definition
+
+AUTH_USER_MODEL = "vocab.Member"
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "user_page"
+LOGOUT_REDIRECT_URL = "main_page"
 
 INSTALLED_APPS = [
     "django.contrib.admin",

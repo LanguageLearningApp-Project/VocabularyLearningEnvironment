@@ -3,9 +3,11 @@ from .models import Member, StudySession, VocabularyList
 from django.db.models import Q
 
 class MemberForm(forms.ModelForm):
+  password = forms.CharField(widget=forms.PasswordInput)  
+  
   class Meta:
     model = Member
-    fields = ["user_name", "password"]
+    fields = ["username", "password"]
     
 class StudySessionForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
