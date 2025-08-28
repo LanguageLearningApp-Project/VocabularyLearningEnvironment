@@ -144,9 +144,10 @@ async function loadWord(deckId) {
 checkBtn.addEventListener("click", async () => {
   const val = answerEl.value.trim();
 
-  if (currentQuestionId && val) {
-    await submitAnswer(currentQuestionId, val);
+  if (currentQuestionId) {
+    await submitAnswer(currentQuestionId, val || "");
   }
+  
   
   if (val.toLowerCase() === currentTranslation.toLowerCase()) {
     

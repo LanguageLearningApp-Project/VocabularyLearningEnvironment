@@ -197,9 +197,13 @@ def delete_list(request, list_id):
 def _is_correct(given: str, expected: str) -> bool:
     g = _normalize(given)
     e = _normalize(expected)
+    
+    if not g or g == "":
+        return False
+          
     if g == e:
         return True
-    # Optional: ignore punctuation for looser matches
+    
     rm = lambda x: re.sub(r"[^\w\s]", "", x)
     return rm(g) == rm(e)
 
@@ -225,8 +229,8 @@ def submit_answer(request):
         user_answer = UserAnswer.objects.create(
             user=user,
             question=question,
-            given_answer=given_answer,
-            is_correct=correct,
+            given_answer=given_answer, 
+            is_correct=correct, 
         )
 
     return JsonResponse({
@@ -300,7 +304,7 @@ def submit_answer_session(request):
     question_id = request.POST.get("question_id")
     given_answer = request.POST.get("given_answer", "")
 
-    if not (session_id and question_id and given_answer):
+    if not (session_id and question_id):
         return JsonResponse({"status": "error", "message": "Missing parameters"})
 
     session = get_object_or_404(StudySession, id=session_id, user=user)

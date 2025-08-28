@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.exceptions import ValidationError 
 from django.utils import timezone
 from django.contrib.auth.models import AbstractUser
 from django.db import models
@@ -30,7 +31,6 @@ class Vocabulary(models.Model):
     def __str__(self):
         return self.source_word + "->" + self.target_word
     
-
 class UserAnswer(models.Model):
     question = models.ForeignKey(Vocabulary, on_delete=models.CASCADE)
     user = models.ForeignKey(Member, on_delete=models.CASCADE)
@@ -57,27 +57,44 @@ class StudySession(models.Model):
 
     user = models.ForeignKey("Member", on_delete=models.CASCADE, related_name="study_sessions")
     vocabulary_list = models.ForeignKey("VocabularyList", on_delete=models.CASCADE, related_name="study_sessions")
-    name = models.CharField(max_length=120) 
+    name = models.CharField(max_length=120)
     goal_type = models.CharField(max_length=20, choices=GOAL_TYPE_CHOICES)
     goal_value = models.PositiveIntegerField(default=20)
 
+    # (optional but nicer for a DateField)
+    # start_date = models.DateField(default=timezone.localdate)
     start_date = models.DateField(default=timezone.now)
-    end_date = models.DateField() 
-
-    memory_json = models.JSONField(default=dict, blank=True) 
-    is_active = models.BooleanField(default=True)
+    end_date = models.DateField()
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self):
+        super().clean()
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValidationError({"end_date": "End date must be on or after the start date."})
+
+    def save(self, *args, **kwargs):
+        self.full_clean()  
+        return super().save(*args, **kwargs)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                name="studysession_end_gte_start",
+                check=Q(end_date__gte=F("start_date")),
+            )
+        ]
 
     def days_total(self):
         return (self.end_date - self.start_date).days + 1
 
     def is_running_today(self):
         today = timezone.localdate()
-        return self.is_active and self.start_date <= today <= self.end_date
+        return self.start_date <= today <= self.end_date
 
     def __str__(self):
         return f"{self.name} ({self.user.username})"
+
 
 
