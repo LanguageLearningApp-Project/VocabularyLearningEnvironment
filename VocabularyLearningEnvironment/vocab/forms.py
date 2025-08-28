@@ -24,7 +24,7 @@ class StudySessionForm(forms.ModelForm):
 
     class Meta:
         model = StudySession
-        fields = ["name", "vocabulary_list", "goal_type", "goal_value", "start_date", "end_date", "is_active"]
+        fields = ["name", "vocabulary_list", "goal_type", "goal_value", "start_date", "end_date"]
         widgets = {
             "start_date": forms.DateInput(attrs={"type": "date"}),
             "end_date": forms.DateInput(attrs={"type": "date"}),
