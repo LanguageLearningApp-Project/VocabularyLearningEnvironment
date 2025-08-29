@@ -4,13 +4,14 @@ from components.teacher.items import WordItem
 from components.learners.exp_memory import ExpMemoryLearner
 from components.teacher.planners import RandomPlanner 
 from .forms import MemberForm, StudySessionForm
-from .models import Member, UserAnswer, UserMemory, Vocabulary, VocabularyList, StudySession
+from .models import Member, UserAnswer, UserMemory, Vocabulary, VocabularyList, StudySession, DailyReviewCounter
 from django.contrib import messages
 from django.shortcuts import redirect
 from django.utils import timezone
 import unicodedata, re
 from django.views.decorators.http import require_POST
 from django.db import transaction
+from django.db.models import F
 
 
 planner = RandomPlanner()
@@ -78,38 +79,57 @@ def get_public_decks(request):
 def home(request):
     return render(request, "vocab/home.html")
 
+from django.db.models import F  
+
 def random_word_view(request, deck_id):
     member_id = request.session.get("member_id")
-    deck = Vocabulary.objects.filter(vocabulary_list__id=deck_id)
-    
-    item_list = []
-    vocab_dict = {}
+    member = get_object_or_404(Member, id=member_id) 
 
-    for vocab in deck:
-        word_item = WordItem(source = vocab.source_word, target = vocab.target_word)
-        item_list.append(word_item)
-        vocab_dict[word_item] = vocab
+    deck_qs = Vocabulary.objects.filter(vocabulary_list__id=deck_id)
+    if not deck_qs.exists():
+        return JsonResponse({"status": "error", "message": "This deck is empty."})
+
+    item_list, vocab_dict = [], {}
+    for vocab in deck_qs:
+        wi = WordItem(source=vocab.source_word, target=vocab.target_word)
+        item_list.append(wi)
+        vocab_dict[wi] = vocab
 
     learner_memory = request.session.get("learner_memory") or {}
     learner = ExpMemoryLearner(alpha=0.1, beta=0.5)
     learner.load_memory(learner_memory)
 
-    chosen_item = planner.choose_item(item_list, context=None, time=0)
-    question = chosen_item.get_question()
-    translation = chosen_item.get_answer()
-    
-    chosen_vocab = vocab_dict[chosen_item]
-
-    now_seconds = int(timezone.now().timestamp() )
+    now_seconds = int(timezone.now().timestamp())
+    chosen_item = planner.choose_item(item_list, context=None, time=now_seconds)
     learner.learn(chosen_item, time=now_seconds)
 
     request.session["learner_memory"] = learner.dump_memory()
-    member = get_object_or_404(Member, id=member_id)
-    user_mem, _ = UserMemory.objects.get_or_create(user=member) 
+    user_mem, _ = UserMemory.objects.get_or_create(user=member)
     user_mem.memory_json = learner.dump_memory()
-    user_mem.save()
+    user_mem.save(update_fields=["memory_json"])
 
-    return JsonResponse({"word": question, "translation": translation, "question_id": chosen_vocab.id})
+    today = timezone.localdate()
+    session_id = request.GET.get("session_id")
+    session = StudySession.objects.filter(id=session_id, user=member).first() if session_id else None
+
+    if session:
+        counter, _ = DailyReviewCounter.objects.get_or_create(
+            user=member, study_session=session, date=today, defaults={"count": 0},
+        )
+    else:
+        deck_obj = get_object_or_404(VocabularyList, id=deck_id)
+        counter, _ = DailyReviewCounter.objects.get_or_create(
+            user=member, vocabulary_list=deck_obj, date=today, defaults={"count": 0},
+        )
+    counter.count = F("count") + 1
+    counter.save(update_fields=["count"])
+
+    chosen_vocab = vocab_dict[chosen_item]
+    return JsonResponse({
+        "word": chosen_item.get_question(),
+        "translation": chosen_item.get_answer(),
+        "question_id": chosen_vocab.id,
+    })
 
 def login(request):
     if request.method =="POST":
@@ -267,36 +287,11 @@ def start_session(request, session_id):
     member = get_object_or_404(Member, id=member_id)
     session = get_object_or_404(StudySession, id=session_id, user=member)
 
-    deck_qs = Vocabulary.objects.filter(vocabulary_list=session.vocabulary_list)
-    if not deck_qs.exists():
+    has_words = Vocabulary.objects.filter(vocabulary_list=session.vocabulary_list).exists()
+    if not has_words:
         return JsonResponse({"status": "error", "message": "This deck is empty."})
 
-    item_list, vocab_map = [], {}
-    for vocab in deck_qs:
-        wi = WordItem(source=vocab.source_word, target=vocab.target_word)
-        item_list.append(wi)
-        vocab_map[wi] = vocab
-
-    user_mem, _ = UserMemory.objects.get_or_create(user=member)
-    learner = ExpMemoryLearner(alpha=0.1, beta=0.5)
-    learner.load_memory(user_mem.memory_json or {})
-
-    now_seconds = int(timezone.now().timestamp())
-    chosen_item = planner.choose_item(item_list, context=None, time=now_seconds)
-    learner.learn(chosen_item, time=now_seconds)
-    
-    user_mem.memory_json = learner.dump_memory()
-    user_mem.save(update_fields=["memory_json"])
-
-    vocab_obj = vocab_map[chosen_item]
-    return JsonResponse({
-        "status": "ok",
-        "session_id": session.id,
-        "word": chosen_item.get_question(),
-        "translation": chosen_item.get_answer(),
-        "question_id": vocab_obj.id,
-    })
-
+    return JsonResponse({"status": "ok", "session_id": session.id})
 
 @require_POST
 def submit_answer_session(request):

@@ -51,7 +51,6 @@
         </div>
   
         <div class="deck-actions">
-          <button class="deck-btn" data-deck-id="{{ deck.id }}">Open</button>
   
           <form method="post" action="{% url 'delete_list' deck.id %}" class="delete-form">
             {% csrf_token %}
@@ -81,9 +80,6 @@
           <span class="vocab-count">{{ deck.vocabularies.count }} words</span>
         </div>
   
-        <div class="deck-actions">
-          <button class="deck-btn" data-deck-id="{{ deck.id }}">Study</button>
-        </div>
       </div>
     {% endfor %}
   </div>
@@ -129,7 +125,13 @@
           Goal: {{ s.get_goal_type_display }} = {{ s.goal_value }}
         </h4>
         <div class="deck-actions">
-          <a href="{% url 'home' %}?deck_id={{ s.vocabulary_list.id }}&session_id={{ s.id }}" class="deck-btn">Study</a>
+          <button class="deck-btn session-start"
+        data-session-id="{{ s.id }}"
+        data-deck-id="{{ s.vocabulary_list.id }}">
+    Study
+  </button>
+
+
         </div>
       </div>
     {% empty %}
@@ -453,6 +455,17 @@
     });
   });
 </script>
+
+<script>
+  document.querySelectorAll('.session-start').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
+      const id = btn.dataset.sessionId;
+      const deckId = btn.dataset.deckId;
+      await fetch(`/sessions/${id}/start/`);  
+      window.location.href = `{% url 'home' %}?deck_id=${deckId}&session_id=${id}`;
+    });
+  });
+  </script>
 {% endblock %}
 
 <script>

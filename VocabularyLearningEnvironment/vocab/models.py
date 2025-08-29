@@ -63,8 +63,6 @@ class StudySession(models.Model):
     goal_type = models.CharField(max_length=20, choices=GOAL_TYPE_CHOICES)
     goal_value = models.PositiveIntegerField(default=20)
 
-    # (optional but nicer for a DateField)
-    # start_date = models.DateField(default=timezone.localdate)
     start_date = models.DateField(default=timezone.now)
     end_date = models.DateField()
 
@@ -99,5 +97,44 @@ class StudySession(models.Model):
         return f"{self.name} ({self.user.user_name})"
     
 
+class DailyReviewCounter(models.Model):
+    user = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="daily_review_counters")
+    study_session = models.ForeignKey(
+        "StudySession", null=True, blank=True,
+        on_delete=models.CASCADE, related_name="daily_review_counters"
+    )
+    vocabulary_list = models.ForeignKey(
+        VocabularyList, null=True, blank=True,
+        on_delete=models.CASCADE, related_name="daily_review_counters"
+    )
+    date = models.DateField()
+    count = models.PositiveIntegerField(default=0)
 
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                name="daily_counter_xor_scope",
+                check=(
+                    (Q(study_session__isnull=False) & Q(vocabulary_list__isnull=True)) |
+                    (Q(study_session__isnull=True)  & Q(vocabulary_list__isnull=False))
+                ),
+            ),
+            models.UniqueConstraint(
+                fields=["user", "date", "study_session"],
+                name="uniq_user_date_session",
+            ),
+            models.UniqueConstraint(
+                fields=["user", "date", "vocabulary_list"],
+                name="uniq_user_date_deck",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["user", "date"]),
+            models.Index(fields=["study_session", "date"]),
+            models.Index(fields=["vocabulary_list", "date"]),
+        ]
 
+    def __str__(self):
+        scope = self.study_session_id or self.vocabulary_list_id or "-"
+        return f"{self.user.user_name} • {self.date} • {scope} • {self.count}"
+    
