@@ -1,16 +1,14 @@
 from django.db import models
 from django.core.exceptions import ValidationError 
 from django.utils import timezone
-from django.db.models import F, Q
+from django.contrib.auth.models import AbstractUser
+from django.db import models
+from django.contrib.auth.hashers import make_password, check_password
+from django.utils import timezone
 
-class Member(models.Model): #this is same as the User
-    user_name = models.CharField(max_length=100, unique=True)
-    password = models.CharField(max_length=50)
+class Member(AbstractUser):
+    pass
     
-    def __str__(self):
-        return self.user_name
-    
-
 class VocabularyList(models.Model):
     list_name = models.CharField(max_length=100)
     description = models.CharField(max_length=200)
@@ -49,7 +47,7 @@ class UserMemory(models.Model):
     memory_json = models.JSONField(default=dict)  
 
     def __str__(self):
-        return f"Memory of {self.user.user_name}"
+        return f"Memory of {self.user.username}"
 
 class StudySession(models.Model):
     GOAL_TYPE_CHOICES = [
@@ -94,8 +92,7 @@ class StudySession(models.Model):
         return self.start_date <= today <= self.end_date
 
     def __str__(self):
-        return f"{self.name} ({self.user.user_name})"
-    
+        return f"{self.name} ({self.user.username})"
 
 class DailyReviewCounter(models.Model):
     user = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="daily_review_counters")
