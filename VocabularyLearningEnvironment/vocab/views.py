@@ -4,7 +4,7 @@ from components.teacher.items import WordItem
 from components.learners.exp_memory import ExpMemoryLearner
 from components.teacher.planners import RandomPlanner 
 from .forms import MemberForm, StudySessionForm
-from .models import Member, UserAnswer, UserMemory, Vocabulary, VocabularyList, StudySession, DailyReviewCounter
+from .models import Member, UserAnswer, UserMemory, Vocabulary, VocabularyList, StudySession, DailyReviewCounter, ActiveStudySession, DailyMinuteCounter
 from django.contrib import messages
 from django.shortcuts import redirect
 from django.utils import timezone
@@ -15,10 +15,16 @@ from django.db.models import F
 from django.contrib.auth import authenticate, login 
 from django.contrib.auth import logout 
 from django.contrib.auth.decorators import login_required
-
+from datetime import timedelta
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 
 planner = RandomPlanner()
+
+@login_required
+def session_info(request, session_id):
+    s = get_object_or_404(StudySession, id=session_id, user=request.user)
+    return JsonResponse({"goal_type": s.goal_type})
 
 def _normalize(s: str):
     if not s:
@@ -77,24 +83,28 @@ def get_public_decks(request):
     ]
     return JsonResponse({"decks": decks_data})
 
+@ensure_csrf_cookie
 def home(request):
     return render(request, "vocab/home.html")
 
 @login_required
-def random_word_view(request, deck_id):
-    member_id = request.session.get("member_id")
-    member = get_object_or_404(Member, id=member_id) 
+def random_word_view(request):
     member = request.user
-    deck = Vocabulary.objects.filter(vocabulary_list__id=deck_id)
+    session_id = request.GET.get("session_id")
+    if not session_id:
+        return JsonResponse({"status": "error", "message": "session_id is required."})
+    
+    session = get_object_or_404(
+        StudySession.objects.select_related("vocabulary_list"),
+        id=session_id,
+        user=member
+    )
+    
+    deck = session.vocabulary_list
+    deck_qs = deck.vocabularies.only("id", "source_word", "target_word") 
     
     item_list = []
     vocab_dict = {}
-
-    deck_qs = Vocabulary.objects.filter(vocabulary_list__id=deck_id)
-    if not deck_qs.exists():
-        return JsonResponse({"status": "error", "message": "This deck is empty."})
-
-    item_list, vocab_dict = [], {}
     for vocab in deck_qs:
         wi = WordItem(source=vocab.source_word, target=vocab.target_word)
         item_list.append(wi)
@@ -112,23 +122,7 @@ def random_word_view(request, deck_id):
     user_mem, _ = UserMemory.objects.get_or_create(user=member)
     user_mem.memory_json = learner.dump_memory()
     user_mem.save(update_fields=["memory_json"])
-
-    today = timezone.localdate()
-    session_id = request.GET.get("session_id")
-    session = StudySession.objects.filter(id=session_id, user=member).first() if session_id else None
-
-    if session:
-        counter, _ = DailyReviewCounter.objects.get_or_create(
-            user=member, study_session=session, date=today, defaults={"count": 0},
-        )
-    else:
-        deck_obj = get_object_or_404(VocabularyList, id=deck_id)
-        counter, _ = DailyReviewCounter.objects.get_or_create(
-            user=member, vocabulary_list=deck_obj, date=today, defaults={"count": 0},
-        )
-    counter.count = F("count") + 1
-    counter.save(update_fields=["count"])
-
+    
     chosen_vocab = vocab_dict[chosen_item]
     return JsonResponse({
         "word": chosen_item.get_question(),
@@ -287,52 +281,23 @@ def start_session(request, session_id):
         return HttpResponseBadRequest("Not logged in")
 
     session = get_object_or_404(StudySession, id=session_id, user=member)
-
+    
+    if session.goal_type == "reviews_per_day":
+        today = timezone.localdate()
+        counter, _ = DailyReviewCounter.objects.get_or_create(
+            user=member,
+            study_session=session,
+            date=today,
+            defaults={"count": 0},
+        )
+        DailyReviewCounter.objects.filter(pk=counter.pk).update(
+            count=F("count") + 1
+    )
     has_words = Vocabulary.objects.filter(vocabulary_list=session.vocabulary_list).exists()
     if not has_words:
         return JsonResponse({"status": "error", "message": "This deck is empty."})
 
     return JsonResponse({"status": "ok", "session_id": session.id})
-
-@require_POST
-@login_required
-def submit_answer_session(request):
-    user = request.user
-    session_id = request.POST.get("session_id")
-    question_id = request.POST.get("question_id")
-    given_answer = request.POST.get("given_answer", "")
-
-    if not (session_id and question_id):
-        return JsonResponse({"status": "error", "message": "Missing parameters"})
-
-    session = get_object_or_404(StudySession, id=session_id, user=user)
-    vocab = get_object_or_404(Vocabulary, id=question_id)
-
-    expected = vocab.target_word  
-    correct = _is_correct(given_answer, expected)
-
-    user_mem, _ = UserMemory.objects.get_or_create(user=user)
-    learner = ExpMemoryLearner(alpha=0.1, beta=0.5)
-    learner.load_memory(user_mem.memory_json or {})
-
-    now_seconds = int(timezone.now().timestamp())
-    learner.learn(WordItem(vocab.source_word, vocab.target_word), time=now_seconds)
-
-    user_mem.memory_json = learner.dump_memory()
-    user_mem.save(update_fields=["memory_json"])
-
-    ua = UserAnswer.objects.create(
-        user=user,
-        question=vocab,
-        given_answer=given_answer,
-        is_correct=correct,
-    )
-
-    return JsonResponse({
-        "status": "ok",
-        "saved_id": ua.id,
-        "is_correct": correct,
-    })
 
 @login_required
 def reverse_privacy(request, deck_id):   
@@ -342,3 +307,111 @@ def reverse_privacy(request, deck_id):
     deck.is_public = not deck.is_public
     deck.save()
     return redirect('user_page')
+
+@require_POST
+@login_required
+@transaction.atomic
+def start_study_session(request):
+    sid = request.POST.get("study_session_id")
+    if not sid:
+        return HttpResponseBadRequest("study_session_id is required")
+
+    session = get_object_or_404(StudySession, id=sid, user=request.user)
+    
+    if session.goal_type != "minutes_per_day":
+        ActiveStudySession.objects.filter(user=request.user).delete()
+        return JsonResponse({"status": "skipped", "reason": "not_minutes_goal"})
+
+    ActiveStudySession.objects.filter(user=request.user).delete()
+    active = ActiveStudySession.objects.create(
+        user=request.user,
+        study_session=session,
+    )
+    return JsonResponse({
+        "status": "started",
+        "session_id": active.id,
+        "started_at": active.started_at.isoformat(),
+    })
+
+@require_POST
+@login_required
+@transaction.atomic
+def end_study_session(request):
+    active = (ActiveStudySession.objects
+              .select_for_update()
+              .filter(user=request.user)
+              .select_related("study_session")
+              .first())
+    if not active:
+        return JsonResponse({"status": "ended", "minutes_studied": 0})
+    
+    if active.study_session.goal_type != "minutes_per_day":
+        active.delete()
+        return JsonResponse({"status": "ended", "minutes_studied": 0})
+
+    elapsed_sec = int((timezone.now() - active.started_at).total_seconds())
+    full_minutes = elapsed_sec // 60 
+
+    if full_minutes > 0:
+        today = timezone.localdate()
+        counter, _ = DailyMinuteCounter.objects.select_for_update().get_or_create(
+            user=request.user,
+            study_session=active.study_session,
+            date=today,
+            defaults={"minutes": 0},
+        )
+        DailyMinuteCounter.objects.filter(pk=counter.pk).update(
+            minutes=F("minutes") + full_minutes
+        )
+
+    active.delete()
+
+    return JsonResponse({"status": "ended", "minutes_studied": int(full_minutes)})
+
+@login_required
+def get_study_time_status(request):
+    active = ActiveStudySession.objects.filter(user=request.user).first()
+    if not active:
+        return JsonResponse({"active": False})
+
+    elapsed_sec = int((timezone.now() - active.started_at).total_seconds())
+    return JsonResponse({
+        "active": True,
+        "started_at": active.started_at.isoformat(),
+        "elapsed_seconds": elapsed_sec,
+        "elapsed_minutes": elapsed_sec // 60,
+    })
+
+def update_study_time(request):
+    active = (ActiveStudySession.objects
+              .select_for_update()
+              .filter(user=request.user)
+              .select_related("study_session")
+              .first())
+    if not active:
+        return JsonResponse({"active": False})
+    
+    if active.study_session.goal_type != "minutes_per_day":
+        return JsonResponse({"active": True, "added_minutes": 0, "ignored": True})
+
+    elapsed_sec = int((timezone.now() - active.started_at).total_seconds())
+    full_minutes = elapsed_sec // 60
+    if full_minutes <= 0:
+        return JsonResponse({"active": True, "added_minutes": 0})
+
+    today = timezone.localdate()
+    counter, _ = DailyMinuteCounter.objects.select_for_update().get_or_create(
+        user=request.user,
+        study_session=active.study_session,
+        date=today,
+        defaults={"minutes": 0},
+    )
+    DailyMinuteCounter.objects.filter(pk=counter.pk).update(
+        minutes=F("minutes") + full_minutes
+    )
+
+    active.started_at = active.started_at + timedelta(minutes=full_minutes)
+    active.save(update_fields=["started_at"])
+
+    return JsonResponse({"active": True, "added_minutes": full_minutes})
+

@@ -1,88 +1,101 @@
 {% extends "base.html" %}
 {% block title %}Home{% endblock %}
 
-{% block content %}  
-    <div class="d-flex justify-content-end p-2">
-        {% if request.session.member_id %}
-            <small>
-            {{ request.session.member_username }} |
-            <a href="{% url 'logout' %}">Logout</a>
-            </small>
-        {% endif %}
-    </div>
+{% block content %} 
+  <div class="d-flex justify-content-end p-2">
+    {% if request.user %}
+      <small>
+        {{ request.user.username}} |
+        <a href="{% url 'logout' %}">Logout</a>
+      </small>
+    {% endif %}
+  </div>
 
-    <h1>Vocabulary Training</h1>
+  <h1>Vocabulary Training</h1>
 
-    <div class="question-box" id="questionbox">
-            Question goes here..
-    </div>
+  <div class="question-box" id="questionbox">
+    Question goes here..
+  </div>
 
-    <input id="answer" name="given_answer" type="text" placeholder="Type your answer…"
-        style="font-size:18px; width:300px; padding:8px; border:2px solid #2d6aa6; border-radius:8px; margin-top:20px;">
+  <input id="answer" name="given_answer" type="text" placeholder="Type your answer…"
+         style="font-size:18px; width:300px; padding:8px; border:2px solid #2d6aa6; border-radius:8px; margin-top:20px;">
 
-    <div class="btn-row">
-        <button id="check" class="btn">Check Answer</button>
-        <button id="next"  class="btn">Quit</button>
-    </div>
+  <div class="btn-row">
+    <button id="check" class="btn">Check Answer</button>
+    <button id="quit"  class="btn">Quit</button>
+  </div>
 
-    <pre id="out" style="margin:8px 0 0; font-size:16px;"></pre>
-    <p id="progress" style="margin-top:20px; font-weight:600;"></p>
-    
-<style>
+  <pre id="out" style="margin:8px 0 0; font-size:16px;"></pre>
+  <p id="progress" style="margin-top:20px; font-weight:600;"></p>
+  
+  <style>
     .container {
-        background-color: white;
-        border-radius: 15px;
-        padding: 40px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-        width: 95%;
-        height: 60vh;
-        max-width: 700px;
-        text-align: center;
-        margin-top: 70px;
+      background-color: white;
+      border-radius: 15px;
+      padding: 40px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      width: 95%;
+      height: 60vh;
+      max-width: 700px;
+      text-align: center;
+      margin-top: 70px;
     }
     h1 {
-        color: #1e4eb6;
-        font-size: 2.7em;
-        margin-bottom: 30px;
-        font-weight: bold;
+      color: #1e4eb6;
+      font-size: 2.7em;
+      margin-bottom: 30px;
+      font-weight: bold;
     }
 
     .question-box {
-        font-size:18px; 
-        width:400px; 
-        padding:8px; 
-        border:2px solid #2d6aa6; 
-        background-color:#d3e2f1;
-        border-radius:8px; 
-        margin: 50px auto 0 auto;
-        display: block;         
+      font-size:18px;
+      width:400px;
+      padding:8px;
+      border:2px solid #2d6aa6;
+      background-color:#d3e2f1;
+      border-radius:8px;
+      margin: 50px auto 0 auto;
+      display: block;
     }
 
-    .btn-row { 
-        display:flex; 
-        gap:12px; 
-        margin: 20px auto 0 auto;
-        display: block;    
-    }   
+    .btn-row {
+      display:flex;
+      gap:12px;
+      margin: 20px auto 0 auto;
+      display: block;
+    }
 
     .btn{
-        font-size:18px; background:#2d6aa6; color:#fff;
-        padding:10px 16px; border:0; border-radius:10px;
-        cursor:pointer; font-weight:600;
+      font-size:18px; background:#2d6aa6; color:#fff;
+      padding:10px 16px; border:0; border-radius:10px;
+      cursor:pointer; font-weight:600;
     }
-    .btn:hover{ 
-        filter:brightness(1.05); 
+    .btn:hover{
+      filter:brightness(1.05);
     }
-
-</style>
+  </style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+function getCSRF() {
+  const m = document.querySelector('meta[name="csrf-token"]');
+  if (m && m.content && m.content !== 'NOTPROVIDED') return m.content;
+  const c = document.cookie.match(/(^|;\s*)csrftoken=([^;]+)/);
+  return c ? decodeURIComponent(c[2]) : '';
+}
+function post(url, data={}) {
+  return fetch(url, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type':'application/x-www-form-urlencoded', 'X-CSRFToken': getCSRF() },
+    body: new URLSearchParams(data)
+  });
+}
 
 const box      = document.getElementById("questionbox");
 const answerEl = document.getElementById("answer");
-const nextBtn  = document.getElementById("next");
+const quitBtn  = document.getElementById("quit");
 const checkBtn = document.getElementById("check");
 
 let currentTranslation = "";
@@ -96,39 +109,45 @@ const progressEl = document.getElementById("progress") || (() => {
 })();
 
 const urlParams = new URLSearchParams(window.location.search);
-const currentDeckId = urlParams.get('deck_id');
-const csrftoken = '{{ csrf_token }}';
+const sessionId = urlParams.get('session_id');
+const csrftoken = '{{ csrf_token }}'; 
+
+let goalType = null;
+async function fetchGoalType() {
+  try {
+    const r = await fetch(`/sessions/${sessionId}/info/`, { credentials: 'same-origin' });
+    const j = await r.json();
+    goalType = j.goal_type; // "minutes_per_day" | "reviews_per_day"
+  } catch (_) { goalType = null; }
+}
 
 async function submitAnswer(questionId, givenAnswer) {
-    try {
-        const formData = new FormData();
-        formData.append('question_id', questionId);
-        formData.append('given_answer', givenAnswer);
-        formData.append('csrfmiddlewaretoken', csrftoken);
-
-        const response = await fetch('/submit-answer/', {
-            method: 'POST',
-            body: formData
-        });
-
-        const result = await response.json();
-        console.log('Answer saved:', result);
-    } catch (error) {
-        console.error('Error:', error);
-    }
-}
-
-if (currentDeckId) {
-    loadWord(currentDeckId); 
-}
-
-async function loadWord(deckId) {
   try {
-    const params = new URLSearchParams(window.location.search);
-    const sessionId = params.get('session_id');
+    const formData = new FormData();
+    formData.append('question_id', questionId);
+    formData.append('given_answer', givenAnswer);
+    formData.append('csrfmiddlewaretoken', csrftoken);
 
-    const qs = sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : "";
-    const res = await fetch(`/random-word/${deckId}/${qs}`, { cache: 'no-store' });
+    const response = await fetch('/submit-answer/', {
+      method: 'POST',
+      body: formData,
+      credentials: 'same-origin'
+    });
+
+    const result = await response.json();
+    console.log('Answer saved:', result);
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
+if (sessionId) {
+  loadWord();
+}
+
+async function loadWord() {
+  try {
+    const res = await fetch(`/random-word/?session_id=${encodeURIComponent(sessionId)}`, { cache: 'no-store', credentials: 'same-origin' });
     const data = await res.json();
 
     if (data.status === "error") {
@@ -144,11 +163,10 @@ async function loadWord(deckId) {
     currentQuestionId = data.question_id;
     answerEl.style.backgroundColor = "";
   } catch (e) {
-    box.textContent = "Could not load word";
+    box.textContent = "Could not load word ";
     console.error(e);
   }
 }
-
 
 checkBtn.addEventListener("click", async () => {
   const val = answerEl.value.trim();
@@ -156,32 +174,74 @@ checkBtn.addEventListener("click", async () => {
   if (currentQuestionId) {
     await submitAnswer(currentQuestionId, val || "");
   }
-  
-  
-  if (val.toLowerCase() === currentTranslation.toLowerCase()) {
-    
-    answerEl.style.backgroundColor = "rgba(154, 255, 154, 0.6)"; 
-    setTimeout(() => {
-      answerEl.value = "";
-      answerEl.style.backgroundColor = ""; 
-      answerEl.focus();
-      loadWord(currentDeckId);      
-    }, 500);
+
+  if (val.toLowerCase() === (currentTranslation || "").toLowerCase()) {
+    answerEl.style.backgroundColor = "rgba(154, 255, 154, 0.6)";
   } else {
-    answerEl.style.backgroundColor = "rgba(255, 182, 193, 0.6)"; 
-    setTimeout(() => {
-      answerEl.value = "";
-      answerEl.style.backgroundColor = ""; 
-      answerEl.focus();
-      loadWord(currentDeckId);
-    }, 500);
+    answerEl.style.backgroundColor = "rgba(255, 182, 193, 0.6)";
+  }
+  setTimeout(() => {
+    answerEl.value = "";
+    answerEl.style.backgroundColor = "";
+    answerEl.focus();
+    loadWord();
+  }, 500);
+});
+
+let heartbeatId = null;
+let ending = false;
+
+async function startTimer() {
+  await post('/study/start/', { study_session_id: sessionId });
+}
+function startHeartbeat() {
+  if (heartbeatId) return;
+  heartbeatId = setInterval(() => {
+    post('/study/update_time/').catch(()=>{});
+  }, 60 * 1000); // 60s
+}
+function stopHeartbeat() {
+  if (heartbeatId) clearInterval(heartbeatId);
+  heartbeatId = null;
+}
+async function endTimer() {
+  if (ending) return;
+  ending = true;
+  try {
+    await fetch('/study/end/', {
+      method: 'POST',
+      keepalive: true,
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': getCSRF() },
+      body: '' 
+    });
+  } catch(_) {}
+  stopHeartbeat();
+}
+
+if (quitBtn) {
+  quitBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    if (goalType === 'minutes_per_day') { await endTimer(); }
+    window.location.href = "{% url 'user_page' %}";
+  }, { once: true });
+}
+window.addEventListener('pagehide', () => {
+  if (goalType === 'minutes_per_day') { endTimer(); }
+}, { once: true });
+
+(async function boot(){
+  if (!sessionId) {
+    box.textContent = 'Pick a study session from your dashboard (User Page → Study).';
+    return;
+  }
+  await fetchGoalType();
+
+  if (goalType === 'minutes_per_day') {
+    startTimer().then(startHeartbeat);
   }
 
-});
-
-nextBtn.addEventListener("click", () => {
-  window.location.href = "{% url 'user_page' %}";
-});
-
+  loadWord();
+})();
 </script>
 {% endblock %}

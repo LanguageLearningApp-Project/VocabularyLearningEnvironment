@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.exceptions import ValidationError 
 from django.utils import timezone
+from django.db.models import F, Q
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.contrib.auth.hashers import make_password, check_password
@@ -93,45 +94,66 @@ class StudySession(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.user.username})"
-
+    
 class DailyReviewCounter(models.Model):
     user = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="daily_review_counters")
-    study_session = models.ForeignKey(
-        "StudySession", null=True, blank=True,
-        on_delete=models.CASCADE, related_name="daily_review_counters"
-    )
-    vocabulary_list = models.ForeignKey(
-        VocabularyList, null=True, blank=True,
-        on_delete=models.CASCADE, related_name="daily_review_counters"
-    )
+    study_session = models.ForeignKey("StudySession", on_delete=models.CASCADE, related_name="daily_review_counters")
     date = models.DateField()
     count = models.PositiveIntegerField(default=0)
 
     class Meta:
         constraints = [
-            models.CheckConstraint(
-                name="daily_counter_xor_scope",
-                check=(
-                    (Q(study_session__isnull=False) & Q(vocabulary_list__isnull=True)) |
-                    (Q(study_session__isnull=True)  & Q(vocabulary_list__isnull=False))
-                ),
-            ),
-            models.UniqueConstraint(
+            models.UniqueConstraint( #updating the row to not create duplicates
                 fields=["user", "date", "study_session"],
-                name="uniq_user_date_session",
-            ),
-            models.UniqueConstraint(
-                fields=["user", "date", "vocabulary_list"],
-                name="uniq_user_date_deck",
+                name="uniq_user_date_session_reviews",
             ),
         ]
         indexes = [
             models.Index(fields=["user", "date"]),
             models.Index(fields=["study_session", "date"]),
-            models.Index(fields=["vocabulary_list", "date"]),
         ]
 
     def __str__(self):
-        scope = self.study_session_id or self.vocabulary_list_id or "-"
-        return f"{self.user.user_name} • {self.date} • {scope} • {self.count}"
+        return f"{self.user.username} • {self.date} • {self.study_session_id} • {self.count}"
+
+class DailyMinuteCounter(models.Model):
+    user = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="daily_minute_counters")
+    study_session = models.ForeignKey("StudySession", on_delete=models.CASCADE, related_name="daily_minute_counters")
+    date = models.DateField()
+    minutes = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint( #only one active session per user
+                fields=["user", "date", "study_session"],
+                name="uniq_user_date_session_minutes",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["user", "date"]),
+            models.Index(fields=["study_session", "date"]),
+        ]
+
+    def __str__(self):
+        scope = self.study_session_id or "-"
+        return f"{self.user.username} • {self.date} • {scope} • {self.minutes}min"
+
+
+class ActiveStudySession(models.Model):
+    user = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="active_sessions")
+    study_session = models.ForeignKey("StudySession", on_delete=models.CASCADE, related_name="active_sessions")
+    started_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["user"], name="uniq_active_session_per_user"),
+        ]
+        indexes = [models.Index(fields=["user", "started_at"])]
+
+    def get_elapsed_minutes(self):
+        from django.utils import timezone
+        elapsed = timezone.now() - self.started_at
+        return int(elapsed.total_seconds() / 60)
+    
+    
     
