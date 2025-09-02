@@ -6,9 +6,9 @@
 <div class="user_page_container">
   
   <div class="d-flex justify-content-end p-2">
-    {% if request.session.member_id %}
+    {% if request.user %}
         <small>
-        {{ request.session.member_username }} |
+        {{ request.user.username }} |
         <a href="{% url 'logout' %}">Logout</a>
         </small>
     {% endif %}

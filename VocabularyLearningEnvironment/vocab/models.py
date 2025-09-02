@@ -1,5 +1,4 @@
 from django.db import models
-from django.core.exceptions import ValidationError 
 from django.utils import timezone
 from django.contrib.auth.models import AbstractUser
 from django.db import models
@@ -31,11 +30,12 @@ class Vocabulary(models.Model):
     def __str__(self):
         return self.source_word + "->" + self.target_word
     
+
 class UserAnswer(models.Model):
     question = models.ForeignKey(Vocabulary, on_delete=models.CASCADE)
     user = models.ForeignKey(Member, on_delete=models.CASCADE)
     given_answer = models.CharField(max_length=100)
-    answer_time = models.DateTimeField(auto_now_add=True)
+    answer_time = models.IntegerField(default=0)
     is_correct = models.BooleanField(default=False)
 
     def __str__(self):
@@ -43,11 +43,22 @@ class UserAnswer(models.Model):
 
 
 class UserMemory(models.Model):
-    user = models.OneToOneField('Member', on_delete=models.CASCADE)
-    memory_json = models.JSONField(default=dict)  
+    user = models.ForeignKey("Member", on_delete=models.CASCADE, related_name="word_memories")
+    vocabulary = models.ForeignKey("Vocabulary", on_delete=models.CASCADE, null=True)
+    vocabulary_list = models.ForeignKey("VocabularyList", on_delete=models.CASCADE, related_name="user_memories")
+    n_occurrences = models.IntegerField(default=0)
+    last_occurrence = models.IntegerField(default=0)    
+    alpha = models.FloatField(default=0.1)
+    beta = models.FloatField(default=0.5)
+
+    class Meta:
+        unique_together = ("user", "vocabulary", "vocabulary_list")  
+        indexes = [
+            models.Index(fields=["user", "vocabulary"]),
+        ]
 
     def __str__(self):
-        return f"Memory of {self.user.username}"
+        return f"User:{self.user.username} Word:{self.vocabulary.source_word} "
 
 class StudySession(models.Model):
     GOAL_TYPE_CHOICES = [
@@ -57,44 +68,25 @@ class StudySession(models.Model):
 
     user = models.ForeignKey("Member", on_delete=models.CASCADE, related_name="study_sessions")
     vocabulary_list = models.ForeignKey("VocabularyList", on_delete=models.CASCADE, related_name="study_sessions")
-    name = models.CharField(max_length=120)
+    name = models.CharField(max_length=120) 
     goal_type = models.CharField(max_length=20, choices=GOAL_TYPE_CHOICES)
     goal_value = models.PositiveIntegerField(default=20)
 
-    # (optional but nicer for a DateField)
-    # start_date = models.DateField(default=timezone.localdate)
     start_date = models.DateField(default=timezone.now)
-    end_date = models.DateField()
+    end_date = models.DateField() 
+
+    memory_json = models.JSONField(default=dict, blank=True) 
+    is_active = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    def clean(self):
-        super().clean()
-        if self.start_date and self.end_date and self.end_date < self.start_date:
-            raise ValidationError({"end_date": "End date must be on or after the start date."})
-
-    def save(self, *args, **kwargs):
-        self.full_clean()  
-        return super().save(*args, **kwargs)
-
-    class Meta:
-        constraints = [
-            models.CheckConstraint(
-                name="studysession_end_gte_start",
-                check=Q(end_date__gte=F("start_date")),
-            )
-        ]
 
     def days_total(self):
         return (self.end_date - self.start_date).days + 1
 
     def is_running_today(self):
         today = timezone.localdate()
-        return self.start_date <= today <= self.end_date
+        return self.is_active and self.start_date <= today <= self.end_date
 
     def __str__(self):
         return f"{self.name} ({self.user.username})"
-
-
-

@@ -3,9 +3,9 @@
 
 {% block content %}  
     <div class="d-flex justify-content-end p-2">
-        {% if request.session.member_id %}
+        {% if request.user %}
             <small>
-            {{ request.session.member_username }} |
+            {{ request.user.username}} |
             <a href="{% url 'logout' %}">Logout</a>
             </small>
         {% endif %}
@@ -96,7 +96,7 @@ const progressEl = document.getElementById("progress") || (() => {
 })();
 
 const urlParams = new URLSearchParams(window.location.search);
-const currentDeckId = urlParams.get('deck_id');
+const sessionId = urlParams.get('session_id');
 const csrftoken = '{{ csrf_token }}';
 
 async function submitAnswer(questionId, givenAnswer) {
@@ -118,13 +118,13 @@ async function submitAnswer(questionId, givenAnswer) {
     }
 }
 
-if (currentDeckId) {
-    loadWord(currentDeckId); 
+if (sessionId) {
+    loadWord(); 
 }
 
-async function loadWord(deckId) {
+async function loadWord() {
   try {
-    const res  = await fetch(`/random-word/${deckId}/`);
+    const res  = await fetch(`/random-word/?session_id=${sessionId}`);
     const data = await res.json();
     box.innerHTML = `
     <strong>${data.word}</strong><br>
@@ -156,7 +156,7 @@ checkBtn.addEventListener("click", async () => {
       answerEl.value = "";
       answerEl.style.backgroundColor = ""; 
       answerEl.focus();
-      loadWord(currentDeckId);      
+      loadWord();      
     }, 500);
   } else {
     answerEl.style.backgroundColor = "rgba(255, 182, 193, 0.6)"; 
@@ -164,7 +164,7 @@ checkBtn.addEventListener("click", async () => {
       answerEl.value = "";
       answerEl.style.backgroundColor = ""; 
       answerEl.focus();
-      loadWord(currentDeckId);
+      loadWord();
     }, 500);
   }
 

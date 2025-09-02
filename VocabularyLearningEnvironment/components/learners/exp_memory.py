@@ -1,12 +1,15 @@
 from dataclasses import dataclass
+from vocab.models import UserMemory, Vocabulary
 from .base import BaseLearner
 from components.teacher.items import TeachingItem, WordItem
 import numpy as np
+from datetime import datetime, timezone
 
 
 @dataclass
 class MemoryState:
     item: TeachingItem
+    vocab_id: int
     n_occurrences: int
     last_occurrence: int
     alpha: float
@@ -33,18 +36,19 @@ class ExpMemoryLearner(BaseLearner):
             return self.memory[question].item.get_answer() if memorized else None
         return None
 
-    def learn(self, item: TeachingItem, time: int):
+    def learn(self, item: TeachingItem, vocab_id: int, time: int):
         question = item.get_question()
         if question in self.memory:
             self.memory[question].n_occurrences += 1
             self.memory[question].last_occurrence = time
         else:
-            state = MemoryState(item, 1, time, self.alpha, self.beta)
+            state = MemoryState(item, vocab_id, 1, time, self.alpha, self.beta)
             self.memory[question] = state
 
     
     def load_memory(self, memory_dict):
         self.memory = {}
+
         for question, state in memory_dict.items():
             item = WordItem(state['item']['source'], state['item']['target'])
             
@@ -55,16 +59,56 @@ class ExpMemoryLearner(BaseLearner):
                 alpha=state['alpha'],
                 beta=state['beta']
             )
+
             self.memory[question] = mem_state
 
-    def dump_memory(self):
-        memory_dict = {}
+
+    def save_memory_to_db(self, user):
         for q, state in self.memory.items():
-            memory_dict[q] = {
-                "item": {"source": state.item.source, "target": state.item.target},
-                "n_occurrences": state.n_occurrences,
-                "last_occurrence": state.last_occurrence,
-                "alpha": state.alpha,
-                "beta": state.beta
-            }
-        return memory_dict
+            try:
+                vocab = Vocabulary.objects.get(id=state.vocab_id)
+            except Vocabulary.DoesNotExist:
+                raise ValueError(f"Vocabulary with id={state.vocab_id} not found in DB!")
+            
+            user_mem, created = UserMemory.objects.get_or_create(
+                user=user, 
+                vocabulary=vocab,
+                vocabulary_list=vocab.vocabulary_list,
+                
+                defaults={
+                    'n_occurrences': state.n_occurrences,
+                    'last_occurrence': state.last_occurrence,
+                    'alpha': state.alpha,
+                    'beta': state.beta
+                }
+            )
+            if not created:
+                user_mem.vocabulary_list = vocab.vocabulary_list
+                user_mem.n_occurrences = state.n_occurrences
+                user_mem.last_occurrence = state.last_occurrence
+                user_mem.alpha = state.alpha
+                user_mem.beta = state.beta
+                user_mem.save()
+
+    @classmethod
+    def load_memory_from_db(cls, user, alpha: float = 0.1, beta: float = 0.5):
+        learner = cls(alpha=alpha, beta=beta)
+        user_memory_qs = UserMemory.objects.select_related("vocabulary").filter(user=user)
+        
+        for user_memory in user_memory_qs:
+            item = WordItem(source=user_memory.vocabulary.source_word, target=user_memory.vocabulary.target_word)
+            question=item.get_question()
+  
+            memory_state = MemoryState(
+                item=item,
+                vocab_id=user_memory.vocabulary.id,
+                n_occurrences=user_memory.n_occurrences,
+                last_occurrence=user_memory.last_occurrence,
+                alpha=user_memory.alpha,
+                beta=user_memory.beta,
+            )
+        
+            learner.memory[question] = memory_state
+        return learner
+
+
