@@ -1,3 +1,4 @@
+import time
 from django.shortcuts import get_object_or_404, redirect, render
 from django.http import HttpResponseBadRequest, JsonResponse
 from components.teacher.items import WordItem
@@ -10,7 +11,7 @@ from django.shortcuts import redirect
 from django.utils import timezone
 import unicodedata, re
 from django.views.decorators.http import require_POST
-from django.db import transaction
+from django.db import OperationalError, transaction
 from django.db.models import F
 from django.contrib.auth import authenticate, login 
 from django.contrib.auth import logout 
@@ -96,11 +97,7 @@ def choose_random_word(user, session):
 
     item_list = []
     vocab_dict = {}
-    for vocab in deck_qs:
-        wi = WordItem(source=vocab.source_word, target=vocab.target_word)
-        item_list.append(wi)
-        vocab_dict[wi] = vocab
-
+    
     for vocab in vocab_qs:
         word_item = WordItem(source = vocab.source_word, target = vocab.target_word)
         item_list.append(word_item)
@@ -115,15 +112,13 @@ def choose_random_word(user, session):
     learner = ExpMemoryLearner.load_memory_from_db(user, alpha=0.1, beta=0.5)
     learner.learn(chosen_item, chosen_vocab.id, now_seconds)
    
-    with transaction.atomic():
-        learner.save_memory_to_db(user)
+    learner.save_memory_to_db_with_retry(user)
 
     return {  
             "word": question,
             "translation": translation,
             "question_id": chosen_vocab.id
         }
-
 
 @login_required
 def random_word_view(request):

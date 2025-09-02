@@ -4,6 +4,9 @@ from .base import BaseLearner
 from components.teacher.items import TeachingItem, WordItem
 import numpy as np
 from datetime import datetime, timezone
+from django.db import transaction
+import time
+from django.db import OperationalError, transaction
 
 
 @dataclass
@@ -88,27 +91,51 @@ class ExpMemoryLearner(BaseLearner):
                 user_mem.last_occurrence = state.last_occurrence
                 user_mem.alpha = state.alpha
                 user_mem.beta = state.beta
-                user_mem.save()
+                with transaction.atomic():
+                    user_mem.save()
 
+
+    def save_memory_to_db_with_retry(self, user, retries=5, delay=0.1):
+        for _ in range(retries):
+            try:
+                with transaction.atomic():
+                    self.save_memory_to_db(user)
+                break
+            except OperationalError as e:
+                if 'database is locked' in str(e):
+                    time.sleep(delay)
+                else:
+                    raise
+                
     @classmethod
-    def load_memory_from_db(cls, user, alpha: float = 0.1, beta: float = 0.5):
-        learner = cls(alpha=alpha, beta=beta)
-        user_memory_qs = UserMemory.objects.select_related("vocabulary").filter(user=user)
+    def load_memory_from_db(cls, user, alpha: float = 0.1, beta: float = 0.5, retries: int = 5, delay: float = 0.1):
+        for attempt in range(retries):
+            try:
+                learner = cls(alpha=alpha, beta=beta)
+                user_memory_qs = UserMemory.objects.select_related("vocabulary").filter(user=user)
+                
+                for user_memory in user_memory_qs:
+                    item = WordItem(source=user_memory.vocabulary.source_word, target=user_memory.vocabulary.target_word)
+                    question=item.get_question()
         
-        for user_memory in user_memory_qs:
-            item = WordItem(source=user_memory.vocabulary.source_word, target=user_memory.vocabulary.target_word)
-            question=item.get_question()
-  
-            memory_state = MemoryState(
-                item=item,
-                vocab_id=user_memory.vocabulary.id,
-                n_occurrences=user_memory.n_occurrences,
-                last_occurrence=user_memory.last_occurrence,
-                alpha=user_memory.alpha,
-                beta=user_memory.beta,
-            )
-        
-            learner.memory[question] = memory_state
-        return learner
+                    memory_state = MemoryState(
+                        item=item,
+                        vocab_id=user_memory.vocabulary.id,
+                        n_occurrences=user_memory.n_occurrences,
+                        last_occurrence=user_memory.last_occurrence,
+                        alpha=user_memory.alpha,
+                        beta=user_memory.beta,
+                    )
+                
+                    learner.memory[question] = memory_state
+                return learner
+            
+            except OperationalError as e:
+                if 'database is locked' in str(e):
+                    time.sleep(delay)  
+                else:
+                    raise
+
+        raise OperationalError(f"Could not load memory for user {user.id} after {retries} retries")
 
 

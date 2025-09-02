@@ -7,10 +7,12 @@
     <h1>Welcome to Vocabulary Learning Environment!</h1>
 
     <form action="{% url 'join' %}" method="get" style="display:inline-block;">
+        {% csrf_token %}
         <button type="submit" class="btn">Sign Up</button>
     </form>
 
     <form action="{% url 'login' %}" method="get" style="display:inline-block;">
+        {% csrf_token %}
         <button type="submit" class="btn">Login</button>
     </form>
 </div>

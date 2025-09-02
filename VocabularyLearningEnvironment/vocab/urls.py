@@ -23,5 +23,4 @@ urlpatterns = [
     path("sessions/<int:session_id>/info/", views.session_info, name="session_info"),
     path("sessions/<int:session_id>/delete/", views.delete_session, name="delete_session"),
     path("sessions/<int:session_id>/progress/", views.progress_check, name="progress_check"),
-
 ]

@@ -75,8 +75,6 @@ class StudySession(models.Model):
 
     start_date = models.DateField(default=timezone.now)
     end_date = models.DateField() 
-
-    memory_json = models.JSONField(default=dict, blank=True) 
     is_active = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
