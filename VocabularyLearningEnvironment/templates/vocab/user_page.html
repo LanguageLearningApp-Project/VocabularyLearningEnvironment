@@ -126,23 +126,29 @@
   <h2 class="section-title">Study Sessions</h2>
   <div class="deck-container">
     {% for s in sessions %}
-      <div class="deck-card">
-        <h3>{{ s.name }}</h3>
-        <h4>
-          Deck: {{ s.vocabulary_list.list_name }}<br>
-          {{ s.start_date }} → {{ s.end_date }}<br>
-          Goal: {{ s.get_goal_type_display }} = {{ s.goal_value }}
-        </h4>
+    <div class="deck-card" id="session-{{ s.id }}">
+      <h3>{{ s.name }}</h3>
+      <h4>
+        Deck: {{ s.vocabulary_list.list_name }}<br>
+        {{ s.start_date }} → {{ s.end_date }}<br>
+        Goal: {{ s.get_goal_type_display }} = {{ s.goal_value }}
+      </h4>
+      <p class="progress-text" id="progress-{{ s.id }}">Loading progress...</p>
         <div class="deck-actions">
           <button class="deck-btn session-start"
         data-session-id="{{ s.id }}"
         data-deck-id="{{ s.vocabulary_list.id }}">
-    Study
-  </button>
-
-
-        </div>
-      </div>
+        Study
+      </button>
+    
+      <form method="post" action="{% url 'delete_session' s.id %}" class="delete-session-form" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="delete-btn" aria-label="Delete session {{ s.name }}">
+          Delete Session
+        </button>
+      </form>
+    </div>
+  </div>
     {% empty %}
       <p class="no-items-message">No study sessions yet.</p>
     {% endfor %}
@@ -490,6 +496,42 @@
     });
   });
   </script>
+
+  <script>
+    document.querySelectorAll('form.delete-session-form').forEach(form=>{
+      form.addEventListener('submit', (e)=>{
+        const title = form.closest('.deck-card')?.querySelector('h3')?.textContent?.trim() || 'this session';
+        if(!confirm(`Delete "${title}" session? This cannot be undone.`)){
+          e.preventDefault();
+        }
+      });
+    });
+
+    async function fetchProgress(id) {
+      const r = await fetch(`/sessions/${id}/progress/`, { credentials: 'same-origin' });
+      const j = await r.json();
+      const el = document.getElementById(`progress-${id}`);
+
+      if (el) {
+        let text = `Goal: ${j.progress}/${j.goal_value} ${j.goal_type === "minutes_per_day" ? "minutes" : "reviews"}`;
+        if (j.progress >= j.goal_value) {
+          text += " Completed!";
+        }
+        el.innerText = text;
+      }
+    }
+    document.querySelectorAll("[id^='session-']").forEach(card => {
+      const id = card.id.replace("session-", "");
+      fetchProgress(id);
+      setInterval(() => fetchProgress(id), 5000);
+    });
+
+    setInterval(fetchProgress, 5000); 
+    fetchProgress();
+    
+    
+    </script>
+
 {% endblock %}
 
 <script>

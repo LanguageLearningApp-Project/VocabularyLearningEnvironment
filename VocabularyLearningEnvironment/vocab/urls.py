@@ -21,5 +21,7 @@ urlpatterns = [
     path("study/status/", views.get_study_time_status, name="study_status"),
     path("study/update_time/", views.update_study_time, name="study_update_time"),
     path("sessions/<int:session_id>/info/", views.session_info, name="session_info"),
+    path("sessions/<int:session_id>/delete/", views.delete_session, name="delete_session"),
+    path("sessions/<int:session_id>/progress/", views.progress_check, name="progress_check"),
 
 ]

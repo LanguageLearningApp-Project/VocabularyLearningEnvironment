@@ -415,3 +415,53 @@ def update_study_time(request):
 
     return JsonResponse({"active": True, "added_minutes": full_minutes})
 
+@require_POST
+@login_required
+def delete_session(request, session_id):
+    session = get_object_or_404(StudySession, id=session_id, user=request.user)
+
+    active = (ActiveStudySession.objects
+              .select_for_update()
+              .filter(user=request.user, study_session=session)
+              .first())
+    if active:
+        if session.goal_type == "minutes_per_day":
+            elapsed_sec = int((timezone.now() - active.started_at).total_seconds())
+            full_minutes = elapsed_sec // 60
+            if full_minutes > 0:
+                today = timezone.localdate()
+                counter, _ = DailyMinuteCounter.objects.select_for_update().get_or_create(
+                    user=request.user,
+                    study_session=session,
+                    date=today,
+                    defaults={"minutes": 0},
+                )
+                DailyMinuteCounter.objects.filter(pk=counter.pk).update(
+                    minutes=F("minutes") + full_minutes
+                )
+        active.delete()
+    session.delete()
+    return redirect("user_page")
+
+@login_required
+def progress_check(request, session_id):
+    session = get_object_or_404(StudySession, id=session_id, user=request.user)
+    today = timezone.localdate()
+
+    if session.goal_type == "reviews_per_day":
+        counter = DailyReviewCounter.objects.filter(
+            user=request.user, study_session=session, date=today
+        ).first()
+        progress = counter.count if counter else 0
+    else: 
+        counter = DailyMinuteCounter.objects.filter(
+            user=request.user, study_session=session, date=today
+        ).first()
+        progress = counter.minutes if counter else 0
+
+    return JsonResponse({
+        "goal_type": session.goal_type,
+        "goal_value": session.goal_value,
+        "progress": progress,
+        "done": progress >= session.goal_value,
+    })
