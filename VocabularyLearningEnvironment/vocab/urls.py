@@ -16,4 +16,12 @@ urlpatterns = [
     path("sessions/<int:session_id>/start/", views.start_session, name="start_session"),
     path("public-decks/", views.get_public_decks, name="get_public_decks"),
     path("reverse_privacy/<int:deck_id>/", views.reverse_privacy, name="reverse_privacy"),
+    path("study/start/", views.start_study_session, name="study_start"),
+    path("study/end/", views.end_study_session, name="study_end"),
+    path("study/status/", views.get_study_time_status, name="study_status"),
+    path("study/update_time/", views.update_study_time, name="study_update_time"),
+    path("sessions/<int:session_id>/info/", views.session_info, name="session_info"),
+    path("sessions/<int:session_id>/delete/", views.delete_session, name="delete_session"),
+    path("sessions/<int:session_id>/progress/", views.progress_check, name="progress_check"),
+
 ]

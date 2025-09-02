@@ -89,8 +89,6 @@ class Migration(migrations.Migration):
                 ('goal_value', models.PositiveIntegerField(default=20)),
                 ('start_date', models.DateField(default=django.utils.timezone.now)),
                 ('end_date', models.DateField()),
-                ('memory_json', models.JSONField(blank=True, default=dict)),
-                ('is_active', models.BooleanField(default=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='study_sessions', to=settings.AUTH_USER_MODEL)),
