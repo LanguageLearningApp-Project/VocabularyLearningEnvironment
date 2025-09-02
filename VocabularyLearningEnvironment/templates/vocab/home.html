@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 {% block title %}Home{% endblock %}
 
-{% block content %} 
-  <div class="d-flex justify-content-end p-2">
-    {% if request.user %}
-      <small>
-        {{ request.user.username}} |
-        <a href="{% url 'logout' %}">Logout</a>
-      </small>
-    {% endif %}
-  </div>
+{% block content %}  
+    <div class="d-flex justify-content-end p-2">
+        {% if request.user %}
+            <small>
+            {{ request.user.username}} |
+            <a href="{% url 'logout' %}">Logout</a>
+            </small>
+        {% endif %}
+    </div>
 
   <h1>Vocabulary Training</h1>
 
@@ -110,7 +110,7 @@ const progressEl = document.getElementById("progress") || (() => {
 
 const urlParams = new URLSearchParams(window.location.search);
 const sessionId = urlParams.get('session_id');
-const csrftoken = '{{ csrf_token }}'; 
+const csrftoken = '{{ csrf_token }}';
 
 let goalType = null;
 async function fetchGoalType() {
@@ -142,7 +142,7 @@ async function submitAnswer(questionId, givenAnswer) {
 }
 
 if (sessionId) {
-  loadWord();
+    loadWord(); 
 }
 
 async function loadWord() {

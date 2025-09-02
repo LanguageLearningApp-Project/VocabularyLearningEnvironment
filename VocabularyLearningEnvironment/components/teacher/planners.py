@@ -36,29 +36,27 @@ class RandomPlanner(Planner):
 
         return random.sample(words, min(count, len(words)))
 
-    def load_chosen_words(self, count):
-        
+    def load_chosen_words(self, count, user):     
         teaching_items = []
         seen = set()
 
         if self.use_json and self.json_words:  
-            words = list(self.json_words.items())  
-            chosen = random.sample(words, min(count * 4, len(words)))
+            if user:
+                user_words = set(
+                    Vocabulary.objects.filter(
+                        vocabulary_list__user=user
+                    ).values_list('source_word', flat=True)
+                )
+            else:
+                user_words = set()
 
-            for source, target in chosen:
-                word_clean = self.clean_word(source)
-                if not word_clean:
-                    continue
+            available_words = [(s, t) for s, t in self.json_words.items() if s not in user_words]
 
-                lemma = self.is_valid_word(word_clean)
-                if not lemma or lemma in seen:
-                    continue
+            chosen_words = random.sample(available_words, min(count, len(available_words)))
 
-                seen.add(lemma)
-                teaching_items.append(WordItem(source=lemma, target=target))
-
-                if len(teaching_items) == count:
-                    break
+            for source, target in chosen_words:
+                seen.add(source)
+                teaching_items.append(WordItem(source, target))
 
         else:
             chosen_words = self.choose_multiple(count * 4)  # oversample
@@ -87,7 +85,7 @@ class RandomPlanner(Planner):
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            return data   # direk dict döndürüyoruz
+            return data   
         except Exception as e:
             print(f"JSON load error: {e}")
             return {}

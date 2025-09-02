@@ -87,22 +87,13 @@ def get_public_decks(request):
 def home(request):
     return render(request, "vocab/home.html")
 
-@login_required
-def random_word_view(request):
-    member = request.user
-    session_id = request.GET.get("session_id")
-    if not session_id:
-        return JsonResponse({"status": "error", "message": "session_id is required."})
-    
-    session = get_object_or_404(
-        StudySession.objects.select_related("vocabulary_list"),
-        id=session_id,
-        user=member
-    )
-    
+def choose_random_word(user, session):
     deck = session.vocabulary_list
-    deck_qs = deck.vocabularies.only("id", "source_word", "target_word") 
-    
+    vocab_qs = Vocabulary.objects.filter(vocabulary_list=deck)
+
+    if not vocab_qs.exists():
+        return {"status": "error", "message": "This deck is empty."}
+
     item_list = []
     vocab_dict = {}
     for vocab in deck_qs:
@@ -110,25 +101,46 @@ def random_word_view(request):
         item_list.append(wi)
         vocab_dict[wi] = vocab
 
-    learner_memory = request.session.get("learner_memory") or {}
-    learner = ExpMemoryLearner(alpha=0.1, beta=0.5)
-    learner.load_memory(learner_memory)
+    for vocab in vocab_qs:
+        word_item = WordItem(source = vocab.source_word, target = vocab.target_word)
+        item_list.append(word_item)
+        vocab_dict[word_item] = vocab
 
-    now_seconds = int(timezone.now().timestamp())
-    chosen_item = planner.choose_item(item_list, context=None, time=now_seconds)
-    learner.learn(chosen_item, time=now_seconds)
-
-    request.session["learner_memory"] = learner.dump_memory()
-    user_mem, _ = UserMemory.objects.get_or_create(user=member)
-    user_mem.memory_json = learner.dump_memory()
-    user_mem.save(update_fields=["memory_json"])
-    
+    chosen_item = planner.choose_item(item_list, context=None, time=0)
     chosen_vocab = vocab_dict[chosen_item]
-    return JsonResponse({
-        "word": chosen_item.get_question(),
-        "translation": chosen_item.get_answer(),
-        "question_id": chosen_vocab.id,
-    })
+    question = chosen_item.get_question()
+    translation = chosen_item.get_answer()
+    
+    now_seconds = int(timezone.now().timestamp() )
+    learner = ExpMemoryLearner.load_memory_from_db(user, alpha=0.1, beta=0.5)
+    learner.learn(chosen_item, chosen_vocab.id, now_seconds)
+   
+    with transaction.atomic():
+        learner.save_memory_to_db(user)
+
+    return {  
+            "word": question,
+            "translation": translation,
+            "question_id": chosen_vocab.id
+        }
+
+
+@login_required
+def random_word_view(request):
+    member = request.user
+    session_id = request.GET.get("session_id")
+    if not session_id:
+        return JsonResponse({"status": "error", "message": "session_id is required."})
+ 
+    session = get_object_or_404(
+        StudySession.objects.select_related("vocabulary_list"),
+        id=session_id,
+        user=member
+    )
+     
+    data=choose_random_word(member, session)
+    return JsonResponse(data) 
+
 
 def login_view(request):
     if request.method =="POST":
@@ -187,7 +199,7 @@ def create_list(request, count):
                 is_public=bool(is_public)
             )
 
-            word_items = planner.load_chosen_words(count)
+            word_items = planner.load_chosen_words(count, user=member)
             for item in word_items:
                 Vocabulary.objects.create(
                     source_word=item.source,
@@ -231,7 +243,7 @@ def submit_answer(request):
     question_id = request.POST.get("question_id")
     given_answer = request.POST.get("given_answer", "")
 
-    if not (user and question_id and given_answer):
+    if not (user and question_id):
         return JsonResponse({"status": "error", "message": "Invalid request"})
 
     try:
@@ -277,10 +289,9 @@ def study_sessions(request):
 @login_required
 def start_session(request, session_id):
     member = request.user
-    if not member:
-        return HttpResponseBadRequest("Not logged in")
-
     session = get_object_or_404(StudySession, id=session_id, user=member)
+
+    data = choose_random_word(member, session)
     
     if not session.is_running_today():
         return JsonResponse(
@@ -302,8 +313,8 @@ def start_session(request, session_id):
     has_words = Vocabulary.objects.filter(vocabulary_list=session.vocabulary_list).exists()
     if not has_words:
         return JsonResponse({"status": "error", "message": "This deck is empty."})
+    return JsonResponse(data)
 
-    return JsonResponse({"status": "ok", "session_id": session.id})
 
 @login_required
 def reverse_privacy(request, deck_id):   
