@@ -90,6 +90,7 @@ class StudySession(models.Model):
 
     def is_running_today(self):
         today = timezone.localdate()
+        print("DEBUG is_running_today:", today, self.start_date, self.end_date)
         return self.start_date <= today <= self.end_date
 
     def __str__(self):

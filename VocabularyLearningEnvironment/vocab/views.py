@@ -282,6 +282,12 @@ def start_session(request, session_id):
 
     session = get_object_or_404(StudySession, id=session_id, user=member)
     
+    if not session.is_running_today():
+        return JsonResponse(
+        {"status": "error", "message": "This study session has ended or has not started yet."},
+        status=400
+    )
+    
     if session.goal_type == "reviews_per_day":
         today = timezone.localdate()
         counter, _ = DailyReviewCounter.objects.get_or_create(
@@ -464,4 +470,5 @@ def progress_check(request, session_id):
         "goal_value": session.goal_value,
         "progress": progress,
         "done": progress >= session.goal_value,
+        "is_running_today": session.is_running_today(),
     })

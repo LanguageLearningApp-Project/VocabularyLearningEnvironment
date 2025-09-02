@@ -134,20 +134,24 @@
         Goal: {{ s.get_goal_type_display }} = {{ s.goal_value }}
       </h4>
       <p class="progress-text" id="progress-{{ s.id }}">Loading progress...</p>
-        <div class="deck-actions">
+      <div class="deck-actions">
+        {% if s.is_running_today %}
           <button class="deck-btn session-start"
-        data-session-id="{{ s.id }}"
-        data-deck-id="{{ s.vocabulary_list.id }}">
-        Study
-      </button>
-    
-      <form method="post" action="{% url 'delete_session' s.id %}" class="delete-session-form" style="display:inline;">
-        {% csrf_token %}
-        <button type="submit" class="delete-btn" aria-label="Delete session {{ s.name }}">
-          Delete Session
-        </button>
-      </form>
-    </div>
+            data-session-id="{{ s.id }}"
+            data-deck-id="{{ s.vocabulary_list.id }}">
+            Study
+          </button>
+        {% else %}
+          <span class="status-badge ended-badge">Ended</span>
+        {% endif %}
+      
+        <form method="post" action="{% url 'delete_session' s.id %}" class="delete-session-form" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit" class="delete-btn" aria-label="Delete session {{ s.name }}">
+            Delete Session
+          </button>
+        </form>
+      </div>
   </div>
     {% empty %}
       <p class="no-items-message">No study sessions yet.</p>
@@ -473,6 +477,17 @@
   color: #10002d;
   border: 1px solid #8e8e8e;
 }
+
+.ended-badge {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
 </style>
 {% endblock %}
 
@@ -482,8 +497,19 @@
     btn.addEventListener('click', async (e)=>{
       const id = btn.dataset.sessionId;
       const deckId = btn.dataset.deckId;
-      await fetch(`/sessions/${id}/start/`);
-      window.location.href = `{% url 'home' %}?deck_id=${deckId}&session_id=${id}`;
+
+      try {
+        const r = await fetch(`/sessions/${id}/start/`, { credentials: 'same-origin' });
+        if (!r.ok) {
+          const j = await r.json().catch(() => ({}));
+          alert(j.message || 'This session cannot be started.');
+          return;
+        }
+        window.location.href = `{% url 'home' %}?deck_id=${deckId}&session_id=${id}`;
+      } catch (err) {
+        console.error(err);
+        alert('An error occurred while starting the session.');
+      }
     });
   });
 
@@ -511,7 +537,7 @@
       const r = await fetch(`/sessions/${id}/progress/`, { credentials: 'same-origin' });
       const j = await r.json();
       const el = document.getElementById(`progress-${id}`);
-
+    
       if (el) {
         let text = `Goal: ${j.progress}/${j.goal_value} ${j.goal_type === "minutes_per_day" ? "minutes" : "reviews"}`;
         if (j.progress >= j.goal_value) {
@@ -519,16 +545,30 @@
         }
         el.innerText = text;
       }
+    
+      // ✅ Study butonunu gizle, Ended rozetini ekle
+      const card = document.getElementById(`session-${id}`);
+      if (card) {
+        const actions = card.querySelector(".deck-actions");
+        const btn = actions.querySelector(".session-start");
+    
+        if (!j.is_running_today) {
+          if (btn) btn.remove();
+          if (!actions.querySelector(".ended-badge")) {
+            const span = document.createElement("span");
+            span.classList.add("status-badge", "ended-badge");
+            span.textContent = "Ended";
+            actions.prepend(span);
+          }
+        }
+      }
     }
+    
     document.querySelectorAll("[id^='session-']").forEach(card => {
       const id = card.id.replace("session-", "");
       fetchProgress(id);
       setInterval(() => fetchProgress(id), 5000);
     });
-
-    setInterval(fetchProgress, 5000); 
-    fetchProgress();
-    
     
     </script>
 
