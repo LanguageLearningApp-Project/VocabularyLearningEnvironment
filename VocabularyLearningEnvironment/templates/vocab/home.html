@@ -141,9 +141,7 @@ async function submitAnswer(questionId, givenAnswer) {
   }
 }
 
-if (sessionId) {
-    loadWord(); 
-}
+
 
 async function loadWord() {
   try {
@@ -240,8 +238,9 @@ window.addEventListener('pagehide', () => {
   if (goalType === 'minutes_per_day') {
     startTimer().then(startHeartbeat);
   }
+  loadWord(); 
 
-  loadWord();
 })();
+
 </script>
 {% endblock %}

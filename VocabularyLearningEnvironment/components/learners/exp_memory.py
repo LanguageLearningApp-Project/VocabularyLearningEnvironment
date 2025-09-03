@@ -106,7 +106,6 @@ class ExpMemoryLearner(BaseLearner):
                     time.sleep(delay)
                 else:
                     raise
-                
     @classmethod
     def load_memory_from_db(cls, user, alpha: float = 0.1, beta: float = 0.5, retries: int = 5, delay: float = 0.1):
         for attempt in range(retries):
