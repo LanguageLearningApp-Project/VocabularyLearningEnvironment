@@ -345,6 +345,8 @@ def start_study_session(request):
         "started_at": active.started_at.isoformat(),
     })
 
+
+# Ends the user's active study session, logs any elapsed minutes to today's counter, and removes the active session record.
 @require_POST
 @login_required
 @transaction.atomic
@@ -439,7 +441,7 @@ def delete_session(request, session_id):
     if active:
         if session.goal_type == "minutes_per_day":
             elapsed_sec = int((timezone.now() - active.started_at).total_seconds())
-            full_minutes = elapsed_sec // 60
+            full_minutes = elapsed_sec // 60                                            #if less than a minute the time spent is not saved!!
             if full_minutes > 0:
                 today = timezone.localdate()
                 counter, _ = DailyMinuteCounter.objects.select_for_update().get_or_create(
@@ -455,6 +457,7 @@ def delete_session(request, session_id):
     session.delete()
     return redirect("user_page")
 
+# Returns today's progress for the given StudySession (reviews or minutes) and whether the daily goal has been completed. Its like a getter funct
 @login_required
 def progress_check(request, session_id):
     session = get_object_or_404(StudySession, id=session_id, user=request.user)
