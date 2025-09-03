@@ -141,8 +141,6 @@ async function submitAnswer(questionId, givenAnswer) {
   }
 }
 
-
-
 async function loadWord() {
   try {
     const res = await fetch(`/random-word/?session_id=${encodeURIComponent(sessionId)}`, { cache: 'no-store', credentials: 'same-origin' });

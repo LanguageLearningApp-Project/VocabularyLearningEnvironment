@@ -97,7 +97,7 @@ def choose_random_word(user, session):
 
     item_list = []
     vocab_dict = {}
-    
+
     for vocab in vocab_qs:
         word_item = WordItem(source = vocab.source_word, target = vocab.target_word)
         item_list.append(word_item)
@@ -309,7 +309,6 @@ def start_session(request, session_id):
     if not has_words:
         return JsonResponse({"status": "error", "message": "This deck is empty."})
     return JsonResponse(data)
-
 
 @login_required
 def reverse_privacy(request, deck_id):   
