@@ -17,6 +17,13 @@ class VocabularyList(models.Model):
 
     def __str__(self):
         return self.list_name
+    
+class QuizList(models.Model):
+    quiz_name = models.CharField(max_length=100)
+    user = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="quiz_lists")
+
+    def __str__(self):
+        return self.quiz_name
 
 class Vocabulary(models.Model):
     source_word = models.CharField(max_length=100)
@@ -27,6 +34,7 @@ class Vocabulary(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     vocabulary_list = models.ForeignKey(VocabularyList, on_delete=models.CASCADE, related_name="vocabularies")
+    quiz_list = models.ForeignKey(QuizList, on_delete=models.CASCADE, related_name="quizzes", null=True, blank=True, default=None )
     
     def __str__(self):
         return self.source_word + "->" + self.target_word
@@ -40,7 +48,7 @@ class UserAnswer(models.Model):
     is_correct = models.BooleanField(default=False)
 
     def __str__(self):
-        return "User " + str(self.user_id) + " - Question " + str(self.question_id)
+        return "User " + str(self.user.username) + " - Question " + str(self.question_id)
 
 
 class UserMemory(models.Model):
@@ -65,6 +73,7 @@ class StudySession(models.Model):
     GOAL_TYPE_CHOICES = [
         ("minutes_per_day", "Minutes per day"),
         ("reviews_per_day", "Reviews per day"),
+        ("quiz", "Quiz")
     ]
 
     user = models.ForeignKey("Member", on_delete=models.CASCADE, related_name="study_sessions")
