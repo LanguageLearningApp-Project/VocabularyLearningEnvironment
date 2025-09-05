@@ -19,11 +19,13 @@ class VocabularyList(models.Model):
         return self.list_name
     
 class QuizList(models.Model):
-    quiz_name = models.CharField(max_length=100)
     user = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="quiz_lists")
-
+    score = models.IntegerField(default=0)
+    question_count = models.IntegerField(default=0)
+    asked_count = models.IntegerField(default=0)
+    
     def __str__(self):
-        return self.quiz_name
+        return self.user.username + "'s quiz"
 
 class Vocabulary(models.Model):
     source_word = models.CharField(max_length=100)
@@ -59,6 +61,7 @@ class UserMemory(models.Model):
     last_occurrence = models.IntegerField(default=0)    
     alpha = models.FloatField(default=0.1)
     beta = models.FloatField(default=0.5)
+    is_asked_in_quiz = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ("user", "vocabulary", "vocabulary_list")  
@@ -77,7 +80,8 @@ class StudySession(models.Model):
     ]
 
     user = models.ForeignKey("Member", on_delete=models.CASCADE, related_name="study_sessions")
-    vocabulary_list = models.ForeignKey("VocabularyList", on_delete=models.CASCADE, related_name="study_sessions")
+    vocabulary_list = models.ForeignKey("VocabularyList", on_delete=models.CASCADE, related_name="study_sessions", null=True, blank=True)
+    quiz_list = models.ForeignKey("QuizList", on_delete=models.CASCADE, related_name="quiz_sessions", null=True, blank=True)
     name = models.CharField(max_length=120) 
     goal_type = models.CharField(max_length=20, choices=GOAL_TYPE_CHOICES)
     goal_value = models.PositiveIntegerField(default=20)

@@ -1,10 +1,10 @@
 from django import forms
-from .models import Member, StudySession, VocabularyList
+from .models import Member, QuizList, StudySession, VocabularyList
 from django.db.models import Q
 
 class MemberForm(forms.ModelForm):
   password = forms.CharField(widget=forms.PasswordInput)  
-  
+
   class Meta:
     model = Member
     fields = ["username", "password"]
@@ -26,7 +26,7 @@ class StudySessionForm(forms.ModelForm):
 
     class Meta:
         model = StudySession
-        fields = ["name", "vocabulary_list", "goal_type", "goal_value", "start_date", "end_date"]
+        fields = ["name", "vocabulary_list", "quiz_list", "goal_type", "goal_value", "start_date", "end_date"]
         widgets = {
             "start_date": forms.DateInput(attrs={"type": "date"}),
             "end_date": forms.DateInput(attrs={"type": "date"}),

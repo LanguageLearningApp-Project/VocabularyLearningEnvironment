@@ -505,6 +505,7 @@
           alert(j.message || 'This session cannot be started.');
           return;
         }
+   
         window.location.href = `{% url 'home' %}?deck_id=${deckId}&session_id=${id}`;
       } catch (err) {
         console.error(err);
@@ -546,7 +547,6 @@
         el.innerText = text;
       }
     
-      // ✅ Study butonunu gizle, Ended rozetini ekle
       const card = document.getElementById(`session-${id}`);
       if (card) {
         const actions = card.querySelector(".deck-actions");

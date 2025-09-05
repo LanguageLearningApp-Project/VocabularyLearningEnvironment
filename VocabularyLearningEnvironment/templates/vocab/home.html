@@ -117,7 +117,7 @@ async function fetchGoalType() {
   try {
     const r = await fetch(`/sessions/${sessionId}/info/`, { credentials: 'same-origin' });
     const j = await r.json();
-    goalType = j.goal_type; // "minutes_per_day" | "reviews_per_day"
+    goalType = j.goal_type; // "minutes_per_day" | "reviews_per_day | quiz sessions"
   } catch (_) { goalType = null; }
 }
 

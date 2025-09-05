@@ -1,3 +1,4 @@
+import random
 import time
 from django.shortcuts import get_object_or_404, redirect, render
 from django.http import HttpResponseBadRequest, JsonResponse
@@ -5,7 +6,7 @@ from components.teacher.items import WordItem
 from components.learners.exp_memory import ExpMemoryLearner
 from components.teacher.planners import RandomPlanner 
 from .forms import MemberForm, StudySessionForm
-from .models import Member, UserAnswer, UserMemory, Vocabulary, VocabularyList, StudySession, DailyReviewCounter, ActiveStudySession, DailyMinuteCounter
+from .models import Member, QuizList, UserAnswer, UserMemory, Vocabulary, VocabularyList, StudySession, DailyReviewCounter, ActiveStudySession, DailyMinuteCounter
 from django.contrib import messages
 from django.shortcuts import redirect
 from django.utils import timezone
@@ -50,7 +51,29 @@ def user_page(request):
             session = session_form.save(commit=False)
             session.user = member
             session.save()
-            messages.success(request, "Study session created.")
+
+            if session.goal_type == "quiz":
+                try:
+                    quiz_list = create_quiz_list(
+                        user=member,
+                        vocabulary_list=session.vocabulary_list,
+                        question_count=session.goal_value
+                    )
+                    session.quiz_list = quiz_list ##add this field to session
+                    session.save()
+                    messages.success(request, f"Quiz session created with {session.goal_value} questions.")
+                except ValueError as e:
+                    messages.error(request, str(e))
+                    return render(request, "vocab/user_page.html", {
+                        "username": username,
+                        "user_decks": user_decks,
+                        "public_decks": public_decks,
+                        "session_form": session_form,
+                        "sessions": StudySession.objects.filter(user=member).order_by("-created_at"),
+                    })
+            else:
+                messages.success(request, "Study session created.")
+            
             return redirect("user_page")
     else:
         session_form = StudySessionForm(user=member)
@@ -88,31 +111,47 @@ def get_public_decks(request):
 def home(request):
     return render(request, "vocab/home.html")
 
-def choose_random_word(user, session):
-    deck = session.vocabulary_list
-    vocab_qs = Vocabulary.objects.filter(vocabulary_list=deck)
+def choose_random_word(user, session, unwanted_quiz_list):
 
-    if not vocab_qs.exists():
-        return {"status": "error", "message": "This deck is empty."}
+    if(session.quiz_list):
+        deck = session.quiz_list
+        vocab_qs = Vocabulary.objects.filter(quiz_list=deck, usermemory__user=user, usermemory__is_asked_in_quiz=False)
+        
+        if not vocab_qs.exists():
+            return {"status": "error", "message": "This deck is empty."}
+        
+        chosen_vocab = vocab_qs.order_by("?").first()
+        question = chosen_vocab.source_word
+        translation = chosen_vocab.target_word
 
-    item_list = []
-    vocab_dict = {}
+        UserMemory.objects.filter(user=user, vocabulary=chosen_vocab).update(is_asked_in_quiz=True)
+        QuizList.objects.filter(id=session.quiz_list.id).update(asked_count=F("asked_count") + 1)
 
-    for vocab in vocab_qs:
-        word_item = WordItem(source = vocab.source_word, target = vocab.target_word)
-        item_list.append(word_item)
-        vocab_dict[word_item] = vocab
 
-    chosen_item = planner.choose_item(item_list, context=None, time=0)
-    chosen_vocab = vocab_dict[chosen_item]
-    question = chosen_item.get_question()
-    translation = chosen_item.get_answer()
-    
-    now_seconds = int(timezone.now().timestamp() )
-    learner = ExpMemoryLearner.load_memory_from_db(user, alpha=0.1, beta=0.5)
-    learner.learn(chosen_item, chosen_vocab.id, now_seconds)
-   
-    learner.save_memory_to_db_with_retry(user)
+    else:
+        deck = session.vocabulary_list
+        vocab_qs = Vocabulary.objects.filter(vocabulary_list=deck)
+        
+        if not vocab_qs.exists():
+            return {"status": "error", "message": "This deck is empty."}
+
+        item_list = []
+        vocab_dict = {}
+
+        for vocab in vocab_qs:
+            word_item = WordItem(source = vocab.source_word, target = vocab.target_word)
+            item_list.append(word_item)
+            vocab_dict[word_item] = vocab
+
+        chosen_item = planner.choose_item(item_list, context=None, time=0)
+        chosen_vocab = vocab_dict[chosen_item]
+        question = chosen_item.get_question()
+        translation = chosen_item.get_answer()
+
+        now_seconds = int(timezone.now().timestamp() )
+        learner = ExpMemoryLearner.load_memory_from_db(user, alpha=0.1, beta=0.5)
+        learner.learn(chosen_item, chosen_vocab.id, now_seconds)
+        learner.save_memory_to_db_with_retry(user)
 
     return {  
             "word": question,
@@ -121,7 +160,7 @@ def choose_random_word(user, session):
         }
 
 @login_required
-def random_word_view(request):
+def random_word_view(request, unwanted_quiz_list):
     member = request.user
     session_id = request.GET.get("session_id")
     if not session_id:
@@ -133,7 +172,7 @@ def random_word_view(request):
         user=member
     )
      
-    data=choose_random_word(member, session)
+    data=choose_random_word(member, session, unwanted_quiz_list)
     return JsonResponse(data) 
 
 
@@ -257,6 +296,9 @@ def submit_answer(request):
             is_correct=correct, 
         )
 
+        if correct and question.quiz_list:
+            QuizList.objects.filter(pk=question.quiz_list.pk).update(score=F("score")+1)
+
     return JsonResponse({
         "status": "ok",
         "saved_id": user_answer.id,
@@ -264,6 +306,7 @@ def submit_answer(request):
     })
 
 @login_required
+#Conveys input form to the session model
 def study_sessions(request):
     member = request.user
 
@@ -273,7 +316,13 @@ def study_sessions(request):
             session = form.save(commit=False)
             session.user = member
             session.save()
-            messages.success(request, "Study session created.")
+
+            if session.goal_type == "quiz":
+                quiz_list = create_quiz_list(user=member, question_count=session.goal_value)
+                session.quiz_list = quiz_list
+                session.save()
+
+            messages.success(request, "Session created.")
             return redirect("study_sessions")
     else:
         form = StudySessionForm(user=member)
@@ -322,6 +371,7 @@ def reverse_privacy(request, deck_id):
 @require_POST
 @login_required
 @transaction.atomic
+#Starts the timer for minutes per day session
 def start_study_session(request):
     sid = request.POST.get("study_session_id")
     if not sid:
@@ -477,3 +527,24 @@ def progress_check(request, session_id):
         "done": progress >= session.goal_value,
         "is_running_today": session.is_running_today(),
     })
+
+def create_quiz_list(user, question_count):
+    user_memory_vocabs = Vocabulary.objects.filter(usermemory__user=user).distinct()    
+    available_count = user_memory_vocabs.count()
+
+    if available_count < question_count:
+        raise ValueError(f"Not enough words in memory. You have {available_count} words learned, but requested {question_count} questions.")
+    
+    selected_vocabs = random.sample(list(user_memory_vocabs), question_count)#bu distinct seçmeli,şuan öyle mi seçiyor???
+    
+    quiz_list = QuizList.objects.create(
+        user=user,
+        question_count=question_count
+    )
+    
+    for vocab in selected_vocabs:
+        vocab.quiz_list = quiz_list
+        vocab.save()
+    
+    return quiz_list
+
