@@ -14,118 +14,109 @@
     {% endif %}
 </div>
   <h1>Welcome, {{ username }}!</h1>
-  
-  <div class="create_deck_card">
-      <form method="post" action="{% url 'create_list' 10 %}">
-        {% csrf_token %} 
-
-        <button class="create_button" type="submit">Create New Deck</button>
-            
-        <div class="deck_inputs">
-            <input class="name_deck_input" type="text" name="list_name" placeholder="Deck name" required>
-            <input class="desc_deck_input" type="text" name="description" placeholder="Description">
-        </div> 
-
-        <div class="public-checkbox">
-            <label>
-                <input type="checkbox" name="is_public"> Make this deck public
-            </label>
-        </div>
- 
-      </form>
-  </div>
-
-  <h2 class="section-title">My Vocabulary Lists</h2>
-  <div class="deck-container">
-    {% for deck in user_decks %}
-      <div class="deck-card" data-deck-id="{{ deck.id }}">
-        <h3>{{ deck.list_name }}</h3>
-        <h4>{{ deck.description }}</h4>
-        
-        <div class="deck-status">
-          {% if deck.is_public %}
-            <span class="status-badge public-badge">Public</span>
-            <form  method="post" action="{% url 'reverse_privacy' deck.id %}" class="privacy-form-inline">
-              {% csrf_token %}
-              <button class="reverse-privacy-button-public" type="submit" class="privacy-btn">Make Private</button>
-          </form>
-
-          {% else %}
-            <span class="status-badge private-badge">Private</span>
-            <form method="post" action="{% url 'reverse_privacy' deck.id %}" class="privacy-form-inline">
-              {% csrf_token %}
-              <button class="reverse-privacy-button-private" type="submit" class="privacy-btn">Make Public</button>
-          </form>
-          {% endif %}
-        </div>
-  
-        <div class="deck-actions">
-  
-          <form method="post" action="{% url 'delete_list' deck.id %}" class="delete-form">
-            {% csrf_token %}
-            <button type="submit" class="delete-btn" aria-label="Delete {{ deck.list_name }}">
-              Delete
-            </button>
-          </form>
-        </div>
-      </div>
-    {% empty %}
-      <p class="no-items-message">You haven't created any vocabulary lists yet.</p>
-    {% endfor %}
-    
-  </div>
-
-  {% if public_decks %}
-  <hr style="margin: 40px 0; opacity:.3;">
-  <h2 class="section-title">Public Vocabulary Lists</h2>
-  <div class="deck-container">
-    {% for deck in public_decks %}
-      <div class="deck-card public-deck-card" data-deck-id="{{ deck.id }}">
-        <h3>{{ deck.list_name }}</h3>
-        <h4>{{ deck.description }}</h4>
-        
-        <div class="deck-creator">
-          <span class="creator-info">Created by: {{ deck.user.username }}</span>
-          <span class="vocab-count">{{ deck.vocabularies.count }} words</span>
-        </div>
-  
-      </div>
-    {% endfor %}
-  </div>
-  {% endif %}
-
-  <hr style="margin: 32px 0; opacity:.3;">
 
   <div class="create_deck_card">
-    <form method="post" action="">
-      {% csrf_token %}
-      <input type="hidden" name="form_type" value="create_session">
-
-      <h2 style="margin:6px 0 12px; color:#1e4eb6;">Create Study Session</h2>
-
+    <form method="post" action="{% url 'create_list' 10 %}">
+      {% csrf_token %} 
+      <button class="create_button" type="submit">Create New Deck</button>
       <div class="deck_inputs">
-        {{ session_form.non_field_errors }}
-        {{ session_form.name.errors }}{{ session_form.name }}
-        {{ session_form.vocabulary_list.errors }}{{ session_form.vocabulary_list }}
-        {{ session_form.goal_type.errors }}{{ session_form.goal_type }}
-        {{ session_form.goal_value.errors }}{{ session_form.goal_value }}
-        {{ session_form.start_date.errors }}{{ session_form.start_date }}
-        {{ session_form.end_date.errors }}{{ session_form.end_date }}
-        {% if session_form.auto_goal %}
-          <label style="width:100%; margin-top:6px;">
-            {{ session_form.auto_goal }} Auto-calc daily goal
+          <input class="name_deck_input" type="text" name="list_name" placeholder="Deck name" required>
+          <input class="desc_deck_input" type="text" name="description" placeholder="Description">
+      </div> 
+      <div class="public-checkbox">
+          <label>
+              <input type="checkbox" name="is_public"> Make this deck public
           </label>
-          <br/>
+      </div>
+    </form>
+</div>
+
+<h2 class="section-title">My Vocabulary Lists</h2>
+<div class="deck-container">
+  {% for deck in user_decks %}
+    <div class="deck-card" data-deck-id="{{ deck.id }}">
+      <h3>{{ deck.list_name }}</h3>
+      <h4>{{ deck.description }}</h4>
+      <div class="deck-status">
+        {% if deck.is_public %}
+          <span class="status-badge public-badge">Public</span>
+          <form method="post" action="{% url 'reverse_privacy' deck.id %}">
+            {% csrf_token %}
+            <button class="reverse-privacy-button-public" type="submit">Make Private</button>
+          </form>
+        {% else %}
+          <span class="status-badge private-badge">Private</span>
+          <form method="post" action="{% url 'reverse_privacy' deck.id %}">
+            {% csrf_token %}
+            <button class="reverse-privacy-button-private" type="submit">Make Public</button>
+          </form>
         {% endif %}
       </div>
-      <br/>
-      <button class="create_button" type="submit">Create Session</button>
-    </form>
-  </div>
+      <div class="deck-actions">
+        <form method="post" action="{% url 'delete_list' deck.id %}">
+          {% csrf_token %}
+          <button type="submit" class="delete-btn">Delete</button>
+        </form>
+      </div>
+    </div>
+  {% empty %}
+    <p class="no-items-message">You haven't created any vocabulary lists yet.</p>
+  {% endfor %}
+</div>
 
+{% if public_decks %}
+<hr>
+<h2 class="section-title">Public Vocabulary Lists</h2>
+<div class="deck-container">
+  {% for deck in public_decks %}
+    <div class="deck-card public-deck-card">
+      <h3>{{ deck.list_name }}</h3>
+      <h4>{{ deck.description }}</h4>
+      <div class="deck-creator">
+        <span class="creator-info">Created by: {{ deck.user.username }}</span>
+        <span class="vocab-count">{{ deck.vocabularies.count }} words</span>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<hr>
+
+<div class="create_deck_card">
+  <form method="post" action="">
+    {% csrf_token %}
+    <input type="hidden" name="form_type" value="create_session">
+
+    <h2 style="margin:6px 0 12px; color:#1e4eb6;">Create Study Session</h2>
+
+    <div class="deck_inputs">
+      {{ session_form.non_field_errors }}
+      {{ session_form.name.errors }}{{ session_form.name }}
+
+      <div id="vocab-list-field">
+        {{ session_form.vocabulary_list.errors }}{{ session_form.vocabulary_list }}
+      </div>
+
+      <div id="quiz-list-field" style="display:none;">
+        {{ session_form.quiz_list.errors }}{{ session_form.quiz_list }}
+      </div>
+
+      {{ session_form.goal_type.errors }}{{ session_form.goal_type }}
+      {{ session_form.goal_value.errors }}{{ session_form.goal_value }}
+      {{ session_form.start_date.errors }}{{ session_form.start_date }}
+      {{ session_form.end_date.errors }}{{ session_form.end_date }}
+    </div>
+    <br/>
+    <button class="create_button" type="submit">Create Session</button>
+  </form>
+</div>
+
+  {# ============ STUDY SESSIONS ============ #}
   <h2 class="section-title">Study Sessions</h2>
   <div class="deck-container">
     {% for s in sessions %}
+    {% if s.goal_type != "quiz" %}
     <div class="deck-card" id="session-{{ s.id }}">
       <h3>{{ s.name }}</h3>
       <h4>
@@ -152,12 +143,201 @@
           </button>
         </form>
       </div>
-  </div>
+    </div>
+    {% endif %}
     {% empty %}
       <p class="no-items-message">No study sessions yet.</p>
     {% endfor %}
   </div>
+
+  {# ============ QUIZ SESSIONS ============ #}
+  <h2 class="section-title">Quiz Sessions</h2>
+  <div class="deck-container">
+    {% for s in quiz_sessions %}
+    <div class="deck-card quiz-session-card" id="quiz-session-{{ s.id }}">
+      <h3>{{ s.name }}</h3>
+      <h4>
+        Quiz from Memory<br>
+        {{ s.start_date }} → {{ s.end_date }}<br>
+        Questions: {{ s.goal_value }}
+      </h4>
+      <div class="deck-actions">
+        {% if s.is_running_today %}
+          <button class="deck-btn quiz-start"
+            data-session-id="{{ s.id }}">
+            Start Quiz
+          </button>
+        {% else %}
+          <span class="status-badge ended-badge">Ended</span>
+        {% endif %}
+      
+        <form method="post" action="{% url 'delete_session' s.id %}" class="delete-session-form" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit" class="delete-btn" aria-label="Delete quiz session {{ s.name }}">
+            Delete Quiz
+          </button>
+        </form>
+      </div>
+    </div>
+    {% empty %}
+      <p class="no-items-message">No quiz sessions yet.</p>
+    {% endfor %}
+  </div>
+
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const goalTypeSelect = document.querySelector("#id_goal_type");
+  const vocabField = document.getElementById("vocab-list-field");
+  const quizField = document.getElementById("quiz-list-field");
+
+  function toggleFields() {
+    if (goalTypeSelect.value === "quiz") {
+      vocabField.style.display = "none";
+      quizField.style.display = "block";
+    } else {
+      vocabField.style.display = "block";
+      quizField.style.display = "none";
+    }
+  }
+
+  if (goalTypeSelect) {
+    goalTypeSelect.addEventListener("change", toggleFields);
+    toggleFields(); // initial
+  }
+
+  // Study session handlers
+  document.querySelectorAll('.session-start').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
+      const id = btn.dataset.sessionId;
+      const deckId = btn.dataset.deckId;
+
+      try {
+        const r = await fetch(`/sessions/${id}/start/`, { credentials: 'same-origin' });
+        if (!r.ok) {
+          const j = await r.json().catch(() => ({}));
+          alert(j.message || 'This session cannot be started.');
+          return;
+        }
+        window.location.href = `{% url 'home' %}?deck_id=${deckId}&session_id=${id}`;
+      } catch (err) {
+        console.error(err);
+        alert('An error occurred while starting the session.');
+      }
+    });
+  });
+
+  // Quiz session handlers
+  document.querySelectorAll('.quiz-start').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
+      const id = btn.dataset.sessionId;
+
+      try {
+        const r = await fetch(`/sessions/${id}/start/`, { credentials: 'same-origin' });
+        if (!r.ok) {
+          const j = await r.json().catch(() => ({}));
+          alert(j.message || 'This quiz session cannot be started.');
+          return;
+        }
+        // Redirect to quiz interface (you'll need to create this URL)
+        window.location.href = `/quiz/?session_id=${id}`;
+      } catch (err) {
+        console.error(err);
+        alert('An error occurred while starting the quiz.');
+      }
+    });
+  });
+
+  document.querySelectorAll('form.delete-form').forEach(form=>{
+    form.addEventListener('submit', (e)=>{
+      const title = form.closest('.deck-card').querySelector('h3')?.textContent?.trim() || 'this deck';
+      if(!confirm(`Delete "${title}"? This cannot be undone.`)){
+        e.preventDefault();
+      }
+    });
+  });
+
+  document.querySelectorAll('form.delete-session-form').forEach(form=>{
+    form.addEventListener('submit', (e)=>{
+      const title = form.closest('.deck-card')?.querySelector('h3')?.textContent?.trim() || 'this session';
+      const isQuiz = form.closest('.quiz-session-card') ? 'quiz session' : 'session';
+      if(!confirm(`Delete "${title}" ${isQuiz}? This cannot be undone.`)){
+        e.preventDefault();
+      }
+    });
+  });
+
+  async function fetchProgress(id) {
+    const r = await fetch(`/sessions/${id}/progress/`, { credentials: 'same-origin' });
+    const j = await r.json();
+    const el = document.getElementById(`progress-${id}`);
+  
+    if (el) {
+      let text = `Goal: ${j.progress}/${j.goal_value} ${j.goal_type === "minutes_per_day" ? "minutes" : "reviews"}`;
+      if (j.progress >= j.goal_value) {
+        text += " Completed!";
+      }
+      el.innerText = text;
+    }
+  
+    const card = document.getElementById(`session-${id}`);
+    if (card) {
+      const actions = card.querySelector(".deck-actions");
+      const btn = actions.querySelector(".session-start");
+  
+      if (!j.is_running_today) {
+        if (btn) btn.remove();
+        if (!actions.querySelector(".ended-badge")) {
+          const span = document.createElement("span");
+          span.classList.add("status-badge", "ended-badge");
+          span.textContent = "Ended";
+          actions.prepend(span);
+        }
+      }
+    }
+  }
+  
+  document.querySelectorAll("[id^='session-']").forEach(card => {
+    const id = card.id.replace("session-", "");
+    fetchProgress(id);
+    setInterval(() => fetchProgress(id), 5000);
+  });
+</script>
+
+<script>
+async function fetchPublicDecks() {
+  try {
+    const response = await fetch("{% url 'get_public_decks' %}");
+    const data = await response.json();
+    const container = document.querySelector(".deck-container");
+
+    container.querySelectorAll(".deck-card.public").forEach(el => el.remove());
+
+    data.decks.forEach(deck => {
+      const div = document.createElement("div");
+      div.classList.add("deck-card", "public");
+      div.setAttribute("data-deck-id", deck.id);
+
+      div.innerHTML = `
+        <h3>${deck.list_name}</h3>
+        <h4>(Created by: ${deck.creator})</h4>
+        <div class="deck-actions">
+          <button class="deck-btn" data-deck-id="${deck.id}">Open</button>
+        </div>
+      `;
+      container.appendChild(div);
+    });
+
+  } catch (error) {
+    console.error("Error fetching public decks:", error);
+  }
+}
+
+fetchPublicDecks();
+setInterval(fetchPublicDecks, 10000);
+</script>
 {% endblock %}
 
 {% block head %}
@@ -222,12 +402,21 @@
     background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
   }
 
+  .quiz-session-card {
+    border: 2px solid #7c3aed;
+    background: linear-gradient(135deg, #fff 0%, #faf5ff 100%);
+  }
+
   .deck-card h3{
     margin:0 0 1px;
     color:#1e4eb6;
     font-size:1.47rem;
     font-weight:800;
     line-height:1.2;
+  }
+
+  .quiz-session-card h3{
+    color:#7c3aed;
   }
 
   .deck-card h4{
@@ -292,6 +481,13 @@
     display: inline-block;
   }
   .deck-btn:hover{ background:#1e4eb6; }
+
+  .quiz-start {
+    background: #7c3aed;
+  }
+  .quiz-start:hover {
+    background: #6d28d9;
+  }
 
   .create_deck_card{
     background:#ffffff;
@@ -362,6 +558,17 @@
     display: block;
   }
 
+  .deck_inputs select{
+    font-size:18px; 
+    width:235px; 
+    padding:8px; 
+    border:2px solid #2d6aa6; 
+    background-color:#d3e2f1;
+    border-radius:8px; 
+    margin: 10;
+    display: block;
+  }
+
   .deck-actions{
     display:flex;
     gap:10px;
@@ -380,114 +587,45 @@
   }
   .delete-btn:hover{ background:#be123c; }
 
-  .create_session_card {
-    background:#ffffff;
-    display: flex;
-    justify-content: center;
-    margin: 20px auto;
-    border-radius:14px;
-    box-shadow:0 6px 40px rgba(0,0,0,.25);
-    padding:20px;
-    width:525px;
-    text-align:center;
-    transition:transform .18s ease, box-shadow .18s ease;
-}
+  .progress-text {
+    font-size: 0.85rem;
+    color: #374151;
+    margin: 8px 0;
+    font-weight: 500;
+  }
 
-.create_session_card h2 {
-    color:#1e4eb6;
-    font-size:1.3rem;
-    font-weight:700;
-    margin-bottom:12px;
-}
+  .reverse-privacy-button-public{
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: #d6dee0;
+    color: #10002d;
+    border: 1px solid #8e8e8e;
+  }
 
-.session_inputs {
-    display:flex;
-    flex-wrap:wrap;
-    justify-content:center;
-    gap:8px;
-    margin-bottom:12px;
-}
+  .reverse-privacy-button-private{
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: #d6dee0;
+    color: #10002d;
+    border: 1px solid #8e8e8e;
+  }
 
-.session_inputs input,
-.session_inputs select {
-    font-size:16px;
-    width:235px;
-    padding:8px;
-    border:2px solid #2d6aa6;
-    background-color:#d3e2f1;
-    border-radius:8px;
-    margin:0;
-}
-
-.session_inputs label {
-    font-size:0.9rem;
-    color:#031e5c;
-    width:100%;
-    text-align:left;
-    margin-top:4px;
-}
-
-.session-card {
-    background:#fff;
-    border-radius:14px;
-    box-shadow:0 6px 20px rgba(0,0,0,.10);
-    padding:20px;
-    width:260px;
-    text-align:center;
-    transition:transform .18s ease, box-shadow .18s ease;
-}
-.session-card:hover {
-    transform:translateY(-3px);
-    box-shadow:0 10px 26px rgba(0,0,0,.14);
-}
-.session-card h3 {
-    margin:0 0 6px;
-    color:#1e4eb6;
-    font-size:1.2rem;
-    font-weight:700;
-}
-.session-card h4 {
-    margin:0 0 12px;
-    color:#031e5c;
-    font-size:0.85rem;
-    font-weight:450;
-    line-height:1.3;
-}
-
-
-.reverse-privacy-button-public{
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  background: #d6dee0;
-  color: #10002d;
-  border: 1px solid #8e8e8e;
-  
-}
-
-.reverse-privacy-button-private{
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  background: #d6dee0;
-  color: #10002d;
-  border: 1px solid #8e8e8e;
-}
-
-.ended-badge {
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
+  .ended-badge {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
 </style>
 {% endblock %}
 

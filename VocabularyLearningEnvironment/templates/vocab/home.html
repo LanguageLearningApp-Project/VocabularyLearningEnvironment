@@ -194,7 +194,7 @@ function startHeartbeat() {
   if (heartbeatId) return;
   heartbeatId = setInterval(() => {
     post('/study/update_time/').catch(()=>{});
-  }, 60 * 1000); // 60s
+  }, 60000); // every 1 minutes the records are sent to the database
 }
 function stopHeartbeat() {
   if (heartbeatId) clearInterval(heartbeatId);
