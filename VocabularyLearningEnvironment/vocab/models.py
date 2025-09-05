@@ -19,11 +19,12 @@ class VocabularyList(models.Model):
         return self.list_name
     
 class QuizList(models.Model):
-    quiz_name = models.CharField(max_length=100)
     user = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="quiz_lists")
+    score = models.IntegerField(default=0)
+    question_count = models.IntegerField()
 
     def __str__(self):
-        return self.quiz_name
+        return self.user.username + "'s quiz" 
 
 class Vocabulary(models.Model):
     source_word = models.CharField(max_length=100)
@@ -77,10 +78,11 @@ class StudySession(models.Model):
     ]
 
     user = models.ForeignKey("Member", on_delete=models.CASCADE, related_name="study_sessions")
-    vocabulary_list = models.ForeignKey("VocabularyList", on_delete=models.CASCADE, related_name="study_sessions")
+    vocabulary_list = models.ForeignKey("VocabularyList", on_delete=models.CASCADE, related_name="study_sessions", null=True, blank=True)#optional
+    quiz_list = models.ForeignKey("QuizList", on_delete=models.CASCADE, related_name="quiz_sessions", null=True, blank=True)
     name = models.CharField(max_length=120) 
     goal_type = models.CharField(max_length=20, choices=GOAL_TYPE_CHOICES)
-    goal_value = models.PositiveIntegerField(default=20)
+    goal_value = models.PositiveIntegerField(default=10)
 
     start_date = models.DateField(default=timezone.now)
     end_date = models.DateField() 
