@@ -250,7 +250,7 @@
     });
   });
 
-  document.querySelectorAll('form.delete-form').forEach(form=>{
+    document.querySelectorAll('form.delete-form').forEach(form=>{
     form.addEventListener('submit', (e)=>{
       const title = form.closest('.deck-card').querySelector('h3')?.textContent?.trim() || 'this deck';
       if(!confirm(`Delete "${title}"? This cannot be undone.`)){
@@ -258,85 +258,85 @@
       }
     });
   });
+  </script>
 
-  document.querySelectorAll('form.delete-session-form').forEach(form=>{
-    form.addEventListener('submit', (e)=>{
-      const title = form.closest('.deck-card')?.querySelector('h3')?.textContent?.trim() || 'this session';
-      const isQuiz = form.closest('.quiz-session-card') ? 'quiz session' : 'session';
-      if(!confirm(`Delete "${title}" ${isQuiz}? This cannot be undone.`)){
-        e.preventDefault();
-      }
+  <script>
+    document.querySelectorAll('form.delete-session-form').forEach(form=>{
+      form.addEventListener('submit', (e)=>{
+        const title = form.closest('.deck-card')?.querySelector('h3')?.textContent?.trim() || 'this session';
+        if(!confirm(`Delete "${title}" session? This cannot be undone.`)){
+          e.preventDefault();
+        }
+      });
     });
-  });
 
-  async function fetchProgress(id) {
-    const r = await fetch(`/sessions/${id}/progress/`, { credentials: 'same-origin' });
-    const j = await r.json();
-    const el = document.getElementById(`progress-${id}`);
-  
-    if (el) {
-      let text = `Goal: ${j.progress}/${j.goal_value} ${j.goal_type === "minutes_per_day" ? "minutes" : "reviews"}`;
-      if (j.progress >= j.goal_value) {
-        text += " Completed!";
+    async function fetchProgress(id) {
+      const r = await fetch(`/sessions/${id}/progress/`, { credentials: 'same-origin' });
+      const j = await r.json();
+      const el = document.getElementById(`progress-${id}`);
+    
+      if (el) {
+        let text = `Goal: ${j.progress}/${j.goal_value} ${j.goal_type === "minutes_per_day" ? "minutes" : "reviews"}`;
+        if (j.progress >= j.goal_value) {
+          text += " Completed!";
+        }
+        el.innerText = text;
       }
-      el.innerText = text;
-    }
-  
-    const card = document.getElementById(`session-${id}`);
-    if (card) {
-      const actions = card.querySelector(".deck-actions");
-      const btn = actions.querySelector(".session-start");
-  
-      if (!j.is_running_today) {
-        if (btn) btn.remove();
-        if (!actions.querySelector(".ended-badge")) {
-          const span = document.createElement("span");
-          span.classList.add("status-badge", "ended-badge");
-          span.textContent = "Ended";
-          actions.prepend(span);
+    
+      const card = document.getElementById(`session-${id}`);
+      if (card) {
+        const actions = card.querySelector(".deck-actions");
+        const btn = actions.querySelector(".session-start");
+    
+        if (!j.is_running_today) {
+          if (btn) btn.remove();
+          if (!actions.querySelector(".ended-badge")) {
+            const span = document.createElement("span");
+            span.classList.add("status-badge", "ended-badge");
+            span.textContent = "Ended";
+            actions.prepend(span);
+          }
         }
       }
     }
-  }
-  
-  document.querySelectorAll("[id^='session-']").forEach(card => {
-    const id = card.id.replace("session-", "");
-    fetchProgress(id);
-    setInterval(() => fetchProgress(id), 5000);
-  });
-</script>
-
-<script>
-async function fetchPublicDecks() {
-  try {
-    const response = await fetch("{% url 'get_public_decks' %}");
-    const data = await response.json();
-    const container = document.querySelector(".deck-container");
-
-    container.querySelectorAll(".deck-card.public").forEach(el => el.remove());
-
-    data.decks.forEach(deck => {
-      const div = document.createElement("div");
-      div.classList.add("deck-card", "public");
-      div.setAttribute("data-deck-id", deck.id);
-
-      div.innerHTML = `
-        <h3>${deck.list_name}</h3>
-        <h4>(Created by: ${deck.creator})</h4>
-        <div class="deck-actions">
-          <button class="deck-btn" data-deck-id="${deck.id}">Open</button>
-        </div>
-      `;
-      container.appendChild(div);
+    
+    document.querySelectorAll("[id^='session-']").forEach(card => {
+      const id = card.id.replace("session-", "");
+      fetchProgress(id);
+      setInterval(() => fetchProgress(id), 5000);
     });
+    
+    
+    async function fetchPublicDecks() {
+    try {
+        const response = await fetch("{% url 'get_public_decks' %}");
+        const data = await response.json();
+        const container = document.querySelector(".deck-container");
 
-  } catch (error) {
-    console.error("Error fetching public decks:", error);
-  }
-}
+        container.querySelectorAll(".deck-card.public").forEach(el => el.remove());
 
-fetchPublicDecks();
-setInterval(fetchPublicDecks, 10000);
+        data.decks.forEach(deck => {
+        const div = document.createElement("div");
+        div.classList.add("deck-card", "public");
+        div.setAttribute("data-deck-id", deck.id);
+
+        div.innerHTML = `
+            <h3>${deck.list_name}</h3>
+            <h4>(Created by: ${deck.creator})</h4>
+            <div class="deck-actions">
+            <button class="deck-btn" data-deck-id="${deck.id}">Open</button>
+            </div>
+        `;
+        container.appendChild(div);
+        });
+
+    } catch (error) {
+        console.error("Error fetching public decks:", error);
+    }
+    }
+
+    fetchPublicDecks();
+    setInterval(fetchPublicDecks, 10000);
 </script>
 {% endblock %}
 
@@ -628,119 +628,3 @@ setInterval(fetchPublicDecks, 10000);
   }
 </style>
 {% endblock %}
-
-{% block extra_js %}
-<script>
-  document.querySelectorAll('.session-start').forEach(btn=>{
-    btn.addEventListener('click', async (e)=>{
-      const id = btn.dataset.sessionId;
-      const deckId = btn.dataset.deckId;
-
-      try {
-        const r = await fetch(`/sessions/${id}/start/`, { credentials: 'same-origin' });
-        if (!r.ok) {
-          const j = await r.json().catch(() => ({}));
-          alert(j.message || 'This session cannot be started.');
-          return;
-        }
-   
-        window.location.href = `{% url 'home' %}?deck_id=${deckId}&session_id=${id}`;
-      } catch (err) {
-        console.error(err);
-        alert('An error occurred while starting the session.');
-      }
-    });
-  });
-
-  document.querySelectorAll('form.delete-form').forEach(form=>{
-    form.addEventListener('submit', (e)=>{
-      const title = form.closest('.deck-card').querySelector('h3')?.textContent?.trim() || 'this deck';
-      if(!confirm(`Delete "${title}"? This cannot be undone.`)){
-        e.preventDefault();
-      }
-    });
-  });
-  </script>
-
-  <script>
-    document.querySelectorAll('form.delete-session-form').forEach(form=>{
-      form.addEventListener('submit', (e)=>{
-        const title = form.closest('.deck-card')?.querySelector('h3')?.textContent?.trim() || 'this session';
-        if(!confirm(`Delete "${title}" session? This cannot be undone.`)){
-          e.preventDefault();
-        }
-      });
-    });
-
-    async function fetchProgress(id) {
-      const r = await fetch(`/sessions/${id}/progress/`, { credentials: 'same-origin' });
-      const j = await r.json();
-      const el = document.getElementById(`progress-${id}`);
-    
-      if (el) {
-        let text = `Goal: ${j.progress}/${j.goal_value} ${j.goal_type === "minutes_per_day" ? "minutes" : "reviews"}`;
-        if (j.progress >= j.goal_value) {
-          text += " Completed!";
-        }
-        el.innerText = text;
-      }
-    
-      const card = document.getElementById(`session-${id}`);
-      if (card) {
-        const actions = card.querySelector(".deck-actions");
-        const btn = actions.querySelector(".session-start");
-    
-        if (!j.is_running_today) {
-          if (btn) btn.remove();
-          if (!actions.querySelector(".ended-badge")) {
-            const span = document.createElement("span");
-            span.classList.add("status-badge", "ended-badge");
-            span.textContent = "Ended";
-            actions.prepend(span);
-          }
-        }
-      }
-    }
-    
-    document.querySelectorAll("[id^='session-']").forEach(card => {
-      const id = card.id.replace("session-", "");
-      fetchProgress(id);
-      setInterval(() => fetchProgress(id), 5000);
-    });
-    
-    </script>
-
-{% endblock %}
-
-<script>
-async function fetchPublicDecks() {
-  try {
-    const response = await fetch("{% url 'get_public_decks' %}");
-    const data = await response.json();
-    const container = document.querySelector(".deck-container");
-
-    container.querySelectorAll(".deck-card.public").forEach(el => el.remove());
-
-    data.decks.forEach(deck => {
-      const div = document.createElement("div");
-      div.classList.add("deck-card", "public");
-      div.setAttribute("data-deck-id", deck.id);
-
-      div.innerHTML = `
-        <h3>${deck.list_name}</h3>
-        <h4>(Created by: ${deck.creator})</h4>
-        <div class="deck-actions">
-          <button class="deck-btn" data-deck-id="${deck.id}">Open</button>
-        </div>
-      `;
-      container.appendChild(div);
-    });
-
-  } catch (error) {
-    console.error("Error fetching public decks:", error);
-  }
-}
-
-fetchPublicDecks();
-setInterval(fetchPublicDecks, 10000);
-</script>

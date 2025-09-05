@@ -72,8 +72,7 @@ def user_page(request):
             if session.goal_type == "quiz":
                 try:
                     quiz_list = create_quiz_list(
-                        user=member,
-                        vocabulary_list=session.vocabulary_list,
+                        user=request.user,
                         question_count=session.goal_value
                     )
                     session.quiz_list = quiz_list ##add this field to session
@@ -138,7 +137,7 @@ def get_public_decks(request):
 def home(request):
     return render(request, "vocab/home.html")
 
-def choose_random_word(user, session, unwanted_quiz_list):
+def choose_random_word(user, session):
 
     if(session.quiz_list):
         deck = session.quiz_list
@@ -186,9 +185,8 @@ def choose_random_word(user, session, unwanted_quiz_list):
             "question_id": chosen_vocab.id
         }
 
-
 @login_required
-def random_word_view(request, unwanted_quiz_list):
+def random_word_view(request):
     member = request.user
     session_id = request.GET.get("session_id")
     if not session_id:
@@ -200,11 +198,8 @@ def random_word_view(request, unwanted_quiz_list):
         user=member,
     )
      
-    data=choose_random_word(member, session, unwanted_quiz_list)
+    data=choose_random_word(member, session)
     return JsonResponse(data) 
-
-    data = choose_random_word(member, session)
-    return JsonResponse(data)
 
 
 def login_view(request):
