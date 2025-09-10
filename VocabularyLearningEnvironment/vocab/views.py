@@ -19,7 +19,7 @@ from components.teacher.items import WordItem
 from components.learners.exp_memory import ExpMemoryLearner
 from components.teacher.planners import RandomPlanner
 from .forms import MemberForm, StudySessionForm
-from .models import Member, QuizList, UserAnswer, UserMemory, Vocabulary, VocabularyList, StudySession, DailyReviewCounter, ActiveStudySession, DailyMinuteCounter
+from .models import Member, QuizList, QuizHistory, UserAnswer, UserMemory, Vocabulary, VocabularyList, StudySession, DailyReviewCounter, ActiveStudySession, DailyMinuteCounter
 from django.contrib import messages
 from django.shortcuts import redirect
 from django.utils import timezone
@@ -89,6 +89,7 @@ def user_page(request):
                     })
                 with transaction.atomic():
                     quiz_list = create_quiz_list(user=member, question_count=session.goal_value)
+                    quiz_list.name = session.name
                     session.quiz_list = quiz_list
                     session.save()
 
