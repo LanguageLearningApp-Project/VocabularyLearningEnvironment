@@ -67,7 +67,6 @@ def user_page(request):
         if session_form.is_valid():
             session = session_form.save(commit=False)
             session.user = member
-            session.save()
 
             if session.goal_type == "quiz":
                 try:
@@ -88,6 +87,7 @@ def user_page(request):
                         "sessions": StudySession.objects.filter(user=member).order_by("-created_at"),
                     })
             else:
+                session.save() 
                 messages.success(request, "Study session created.")
             
             return redirect("user_page")
@@ -346,17 +346,23 @@ def study_sessions(request):
         if form.is_valid():
             session = form.save(commit=False)
             session.user = member
-            session.save()
 
             if session.goal_type == "quiz":
-                quiz_list = create_quiz_list(user=member, question_count=session.goal_value)
-                session.quiz_list = quiz_list
+                try:
+                    quiz_list = create_quiz_list(user=member, question_count=session.goal_value)
+                    session.quiz_list = quiz_list
+                    session.save()
+                    messages.success(request, f"Quiz session created with {session.goal_value} questions.")
+                except ValueError as e:
+                    messages.error(request, str(e))
+                    return redirect("user_page")
+                
+            else:
                 session.save()
-
-            messages.success(request, "Session created.")
+                messages.success(request, "Session created.")
             return redirect("study_sessions")
-    else:
-        form = StudySessionForm(user=member)
+        else:
+            form = StudySessionForm(user=member)
 
     sessions = StudySession.objects.filter(user=member).order_by("-created_at")
     return render(
@@ -594,7 +600,7 @@ def create_quiz_list(user, question_count):
     if available_count < question_count:
         raise ValueError(f"Not enough words in memory. You have {available_count} words learned, but requested {question_count} questions.")
     
-    selected_vocabs = random.sample(list(user_memory_vocabs), question_count)#bu distinct seçmeli,şuan öyle mi seçiyor???
+    selected_vocabs = random.sample(list(user_memory_vocabs), question_count)
     
     quiz_list = QuizList.objects.create(
         user=user,
