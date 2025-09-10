@@ -148,6 +148,7 @@ def choose_random_word(user, session):
             deck = QuizList.objects.select_for_update().get(pk=session.quiz_list.id)
 
             if deck.asked_count >= deck.question_count:
+                save_quiz_to_history(user, deck)
                 _reset_quiz_flags(user, deck.id)
                 return {"status": "done", "message": "Quiz complete.", "score": deck.score, "total": deck.question_count }
 
@@ -644,10 +645,31 @@ def create_quiz_list(user, question_count):
     
     return quiz_list
 
-def restart_quiz(request, session_id):
-    session = get_object_or_404(StudySession, id=session_id, user=request.user, goal_type="quiz")
+def save_quiz_to_history(user, quiz_list):
+    previous_attempts = QuizHistory.objects.filter(user=user, name=quiz_list.name).count()
+    attempt_number = previous_attempts + 1
 
-    if not session.quiz_list:
-        return JsonResponse({"status": "error", "message": "No quiz list associated with this session."}, status=400)
+    QuizHistory.objects.create(
+        user=user,
+        name=f"{quiz_list.name}",
+        score=quiz_list.score,
+        question_count=quiz_list.question_count,
+        attempt=attempt_number
+    )
+
+def restart_quiz(request, session_id):
+    member = request.user
+    session = get_object_or_404(StudySession, id=session_id, user=request.user, goal_type="quiz")
     
-    
+    old_quiz = session.quiz_list
+    if not old_quiz:
+        return JsonResponse({"status": "error", "message": "No quiz associated with this session."}, status=400)
+
+    old_quiz.asked_count = 0
+    old_quiz.score = 0
+    old_quiz.save()
+
+    UserMemory.objects.filter(user=request.user, vocabulary__quiz_list=old_quiz).update(is_asked_in_quiz=False)
+
+    data = choose_random_word(member, session)
+    return JsonResponse(data)
