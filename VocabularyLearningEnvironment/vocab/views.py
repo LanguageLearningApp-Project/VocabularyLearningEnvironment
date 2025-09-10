@@ -386,11 +386,10 @@ def study_sessions(request):
                     return render(request, "vocab/study_sessions.html", {"form": form, "sessions": sessions})
             else:
                 session.save()
-
-            messages.success(request, "Session created.")
+                messages.success(request, "Session created.")
             return redirect("study_sessions")
-    else:
-        form = StudySessionForm(user=member)
+        else:
+            form = StudySessionForm(user=member)
 
     sessions = StudySession.objects.filter(user=member).order_by("-created_at")
     return render(request, "vocab/study_sessions.html", {"form": form, "sessions": sessions})
