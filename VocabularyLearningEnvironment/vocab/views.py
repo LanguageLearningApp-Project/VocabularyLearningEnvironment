@@ -649,12 +649,11 @@ def create_quiz_list(user, question_count):
     return quiz_list
 
 def save_quiz_to_history(user, quiz_list):
-    previous_attempts = QuizHistory.objects.filter(user=user, name=quiz_list.name).count()
+    previous_attempts = QuizHistory.objects.filter(user=user, name=StudySession.name).count()
     attempt_number = previous_attempts + 1
 
     QuizHistory.objects.create(
         user=user,
-        name=f"{quiz_list.name}",
         score=quiz_list.score,
         question_count=quiz_list.question_count,
         attempt=attempt_number
