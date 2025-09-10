@@ -84,6 +84,48 @@ function getCSRF() {
   const c = document.cookie.match(/(^|;\s*)csrftoken=([^;]+)/);
   return c ? decodeURIComponent(c[2]) : '';
 }
+
+document.querySelectorAll('.quiz-restart').forEach(btn=>{
+  btn.addEventListener('click', async ()=>{
+    const id = btn.dataset.sessionId;
+    if (!confirm('Restart this quiz? Score and progress will be reset.')) return;
+
+    try {
+      const r = await fetch(`/sessions/${id}/restart_quiz/`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'X-CSRFToken': getCSRF(),
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: '' 
+      });
+
+      const j = await r.json().catch(()=>({}));
+      if (!r.ok) {
+        alert(j.message || 'Could not reset quiz.');
+        return;
+      }
+
+      alert(`Quiz reset. ${j.question_count} questions ready.`);
+
+      const card = document.getElementById(`quiz-session-${id}`);
+      if (card) {
+        const h4 = card.querySelector('h4');
+        if (h4) {
+          const lines = h4.innerHTML.split('<br>');
+          if (lines.length >= 3) {
+            lines[2] = `Questions: ${j.question_count}`;
+            h4.innerHTML = lines.join('<br>');
+          }
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error while resetting the quiz.');
+    }
+  });
+});
 function post(url, data={}) {
   return fetch(url, {
     method: 'POST',
@@ -149,6 +191,19 @@ function renderDone(message) {
 
   quitBtn.onclick = () => { window.location.href = "{% url 'user_page' %}"; };
 }
+
+function renderError(message) {
+  box.innerHTML = `
+    <strong>Oops!</strong><br/>
+    <em>${message || "Could not load word."}</em>
+  `;
+  answerEl.value = "";
+  answerEl.disabled = true;
+  checkBtn.disabled = true;
+  quitBtn.textContent = "Back to Dashboard";
+  quitBtn.onclick = () => { window.location.href = "{% url 'user_page' %}"; };
+}
+
 
 
 async function loadWord() {

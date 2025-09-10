@@ -35,6 +35,8 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 
 planner = RandomPlanner()
 
+def _reset_quiz_flags(user, quiz_list_id: int):
+    UserMemory.objects.filter(user=user,vocabulary__quiz_list_id=quiz_list_id,is_asked_in_quiz=True).update(is_asked_in_quiz=False)
 
 @login_required
 def session_info(request, session_id):
@@ -644,10 +646,31 @@ def create_quiz_list(user, question_count):
     
     return quiz_list
 
+@require_POST
+@login_required
+@transaction.atomic
 def restart_quiz(request, session_id):
     session = get_object_or_404(StudySession, id=session_id, user=request.user, goal_type="quiz")
 
     if not session.quiz_list:
         return JsonResponse({"status": "error", "message": "No quiz list associated with this session."}, status=400)
     
+    quiz = QuizList.objects.select_for_update().get(pk=session.quiz_list_id)
+
+    has_words = Vocabulary.objects.filter(quiz_list_id=quiz.id).exists()
+    if not has_words:
+        return JsonResponse(
+            {"status": "error", "message": "This quiz has no vocabulary."},
+            status=400
+        )
+
+    QuizList.objects.filter(pk=quiz.id).update(score=0, asked_count=0)
+
+    _reset_quiz_flags(request.user, quiz.id)
+    return JsonResponse({
+        "status": "ok",
+        "message": "Quiz reset.",
+        "quiz_list_id": quiz.id,
+        "question_count": quiz.question_count
+    })
     
