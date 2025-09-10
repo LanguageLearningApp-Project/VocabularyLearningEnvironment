@@ -178,6 +178,12 @@
           </button>
         </form>
       </div>
+
+      <button class="deck-btn quiz-restart"
+        style="margin-top: 10px;"
+        data-session-id="{{ s.id }}">
+        Restart
+  </button>
     </div>
     {% empty %}
       <p class="no-items-message">No quiz sessions yet.</p>
@@ -600,6 +606,14 @@ document.querySelectorAll('.session-start').forEach(btn=>{
     font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
+  }
+  .quiz-restart {
+    background: #f59e0b;
+    margin-top: 8px;
+    width: 70%;
+  }
+  .quiz-restart:hover {
+    background: #d97706;
   }
 </style>
 {% endblock %}

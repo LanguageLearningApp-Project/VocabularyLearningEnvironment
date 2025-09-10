@@ -624,7 +624,7 @@ def create_quiz_list(user, question_count):
     if available_count < question_count:
         raise ValueError(f"Not enough words in memory. You have {available_count} words learned, but requested {question_count} questions.")
     
-    selected_vocabs = random.sample(list(user_memory_vocabs), question_count)#bu distinct seçmeli,şuan öyle mi seçiyor???
+    selected_vocabs = random.sample(list(user_memory_vocabs), question_count)
     selected_ids = [v.id for v in selected_vocabs]
     
     with transaction.atomic():
@@ -633,3 +633,10 @@ def create_quiz_list(user, question_count):
     
     return quiz_list
 
+def restart_quiz(request, session_id):
+    session = get_object_or_404(StudySession, id=session_id, user=request.user, goal_type="quiz")
+
+    if not session.quiz_list:
+        return JsonResponse({"status": "error", "message": "No quiz list associated with this session."}, status=400)
+    
+    
