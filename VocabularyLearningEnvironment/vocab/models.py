@@ -23,7 +23,7 @@ class QuizList(models.Model):
     score = models.IntegerField(default=0)
     question_count = models.IntegerField(default=0)
     asked_count = models.IntegerField(default=0)
-    
+   
     def __str__(self):
         return self.user.username + "'s quiz"
     
@@ -40,7 +40,7 @@ class Vocabulary(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     vocabulary_list = models.ForeignKey(VocabularyList, on_delete=models.CASCADE, related_name="vocabularies")
-    quiz_list = models.ForeignKey(QuizList, on_delete=models.CASCADE, related_name="quizzes", null=True, blank=True, default=None )
+    quiz_list = models.ForeignKey(QuizList, on_delete=models.SET_NULL, related_name="quizzes", null=True, blank=True, default=None )
     
     def __str__(self):
         return self.source_word + "->" + self.target_word
@@ -166,6 +166,4 @@ class ActiveStudySession(models.Model):
         from django.utils import timezone
         elapsed = timezone.now() - self.started_at
         return int(elapsed.total_seconds() / 60)
-    
-    
     
