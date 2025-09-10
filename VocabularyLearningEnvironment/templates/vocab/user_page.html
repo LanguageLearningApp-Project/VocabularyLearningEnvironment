@@ -180,6 +180,11 @@
   const goalTypeSelect = document.querySelector("#id_goal_type");
   const vocabField = document.getElementById("vocab-list-field");
   const quizField = document.getElementById("quiz-list-field");
+  
+
+  const vocabSelect = document.querySelector("#id_vocabulary_list") || (vocabField && vocabField.querySelector("select"));
+  const quizSelect  = document.querySelector("#id_quiz_list")       || (quizField  && quizField.querySelector("select"));
+
   function toggleFields() {
     if (goalTypeSelect && goalTypeSelect.value === "quiz") {
       vocabField.style.display = "none";
