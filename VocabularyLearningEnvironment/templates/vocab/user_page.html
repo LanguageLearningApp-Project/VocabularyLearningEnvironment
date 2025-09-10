@@ -193,41 +193,50 @@
   const vocabField = document.getElementById("vocab-list-field");
   const quizField = document.getElementById("quiz-list-field");
 
-  function toggleFields() {
-    if (goalTypeSelect.value === "quiz") {
-      vocabField.style.display = "none";
-      quizField.style.display = "block";
-    } else {
-      vocabField.style.display = "block";
-      quizField.style.display = "none";
-    }
+  const vocabSelect = document.querySelector("#id_vocabulary_list") || (vocabField && vocabField.querySelector("select"));
+  const quizSelect  = document.querySelector("#id_quiz_list")       || (quizField  && quizField.querySelector("select"));
+
+const parent = vocabField?.parentNode;
+
+function toggleFields() {
+  const isQuiz = goalTypeSelect && goalTypeSelect.value === "quiz";
+
+  if (vocabField && vocabField.parentNode) {
+    vocabField.parentNode.removeChild(vocabField);
+  }
+  if (quizField && quizField.parentNode) {
+    quizField.parentNode.removeChild(quizField);
   }
 
-  if (goalTypeSelect) {
-    goalTypeSelect.addEventListener("change", toggleFields);
-    toggleFields(); // initial
+  if (isQuiz && quizField) {
+    parent.insertBefore(quizField, parent.querySelector("br") || null);
+  } else if (!isQuiz && vocabField) {
+    parent.insertBefore(vocabField, parent.querySelector("br") || null);
   }
+}
 
-  // Study session handlers
-  document.querySelectorAll('.session-start').forEach(btn=>{
-    btn.addEventListener('click', async (e)=>{
-      const id = btn.dataset.sessionId;
-      const deckId = btn.dataset.deckId;
-
-      try {
-        const r = await fetch(`/sessions/${id}/start/`, { credentials: 'same-origin' });
-        if (!r.ok) {
-          const j = await r.json().catch(() => ({}));
-          alert(j.message || 'This session cannot be started.');
-          return;
-        }
-        window.location.href = `{% url 'home' %}?deck_id=${deckId}&session_id=${id}`;
-      } catch (err) {
-        console.error(err);
-        alert('An error occurred while starting the session.');
+if (goalTypeSelect) {
+  goalTypeSelect.addEventListener("change", toggleFields);
+  toggleFields(); 
+}
+document.querySelectorAll('.session-start').forEach(btn=>{
+  btn.addEventListener('click', async ()=>{
+    const id = btn.dataset.sessionId;
+    const deckId = btn.dataset.deckId;
+    try {
+      const r = await fetch(`/sessions/${id}/start/`, { credentials: 'same-origin' });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        alert(j.message || 'This session cannot be started.');
+        return;
       }
-    });
+      window.location.href = `{% url 'home' %}?deck_id=${deckId}&session_id=${id}`;
+    } catch (err) {
+      console.error(err);
+      alert('An error occurred while starting the session.');
+    }
   });
+});
 
   // Quiz session handlers
   document.querySelectorAll('.quiz-start').forEach(btn=>{
