@@ -195,59 +195,58 @@
 <script>
   const goalTypeSelect = document.querySelector("#id_goal_type");
   const vocabField = document.getElementById("vocab-list-field");
-  const quizField = document.getElementById("quiz-list-field");
+  const quizField  = document.getElementById("quiz-list-field");
 
-  const vocabSelect = document.querySelector("#id_vocabulary_list") || (vocabField && vocabField.querySelector("select"));
-  const quizSelect  = document.querySelector("#id_quiz_list")       || (quizField  && quizField.querySelector("select"));
+  // her çağrıda parent'ı güvenli al
+  function toggleFields() {
+    const isQuiz = goalTypeSelect && goalTypeSelect.value === "quiz";
+    const parent = document.querySelector(".deck_inputs");
+    if (!parent) return;
 
-const parent = vocabField?.parentNode;
+    [vocabField, quizField].forEach(el => {
+      if (!el) return;
+      el.style.display = "none";
+      if (el.parentNode) el.parentNode.removeChild(el);
+    });
 
-function toggleFields() {
-  const isQuiz = goalTypeSelect && goalTypeSelect.value === "quiz";
-
-  [vocabField, quizField].forEach(el => {
-    if (!el) return;
-    el.style.display = "none";
-    if (el.parentNode) el.parentNode.removeChild(el);
-  });
-
-  if (isQuiz && quizField) {
-    quizField.style.display = "";
-    parent.insertBefore(quizField, parent.querySelector("br") || null);
-  } else if (!isQuiz && vocabField) {
-    vocabField.style.display = "";
-    parent.insertBefore(vocabField, parent.querySelector("br") || null);
-  }
-}
-
-if (goalTypeSelect) {
-  goalTypeSelect.addEventListener("change", toggleFields);
-  toggleFields(); 
-}
-document.querySelectorAll('.session-start').forEach(btn=>{
-  btn.addEventListener('click', async ()=>{
-    const id = btn.dataset.sessionId;
-    const deckId = btn.dataset.deckId;
-    try {
-      const r = await fetch(`/sessions/${id}/start/`, { credentials: 'same-origin' });
-      if (!r.ok) {
-        const j = await r.json().catch(() => ({}));
-        alert(j.message || 'This session cannot be started.');
-        return;
-      }
-      window.location.href = `{% url 'home' %}?deck_id=${deckId}&session_id=${id}`;
-    } catch (err) {
-      console.error(err);
-      alert('An error occurred while starting the session.');
+    if (isQuiz && quizField) {
+      quizField.style.display = "";
+      parent.insertBefore(quizField, parent.querySelector("br") || null);
+    } else if (!isQuiz && vocabField) {
+      vocabField.style.display = "";
+      parent.insertBefore(vocabField, parent.querySelector("br") || null);
     }
-  });
-});
+  }
 
-  // Quiz session handlers
-  document.querySelectorAll('.quiz-start').forEach(btn=>{
-    btn.addEventListener('click', async (e)=>{
+  if (goalTypeSelect) {
+    goalTypeSelect.addEventListener("change", toggleFields);
+    toggleFields();
+  }
+
+  // normal study session start
+  document.querySelectorAll('.session-start').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
       const id = btn.dataset.sessionId;
+      const deckId = btn.dataset.deckId;
+      try {
+        const r = await fetch(`/sessions/${id}/start/`, { credentials: 'same-origin' });
+        if (!r.ok) {
+          const j = await r.json().catch(() => ({}));
+          alert(j.message || 'This session cannot be started.');
+          return;
+        }
+        window.location.href = `{% url 'home' %}?deck_id=${deckId}&session_id=${id}`;
+      } catch (err) {
+        console.error(err);
+        alert('An error occurred while starting the session.');
+      }
+    });
+  });
 
+  // quiz session start
+  document.querySelectorAll('.quiz-start').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.dataset.sessionId;
       try {
         const r = await fetch(`/sessions/${id}/start/`, { credentials: 'same-origin' });
         if (!r.ok) {
@@ -263,7 +262,8 @@ document.querySelectorAll('.session-start').forEach(btn=>{
     });
   });
 
-    document.querySelectorAll('form.delete-form').forEach(form=>{
+  // deck delete confirm
+  document.querySelectorAll('form.delete-form').forEach(form=>{
     form.addEventListener('submit', (e)=>{
       const title = form.closest('.deck-card').querySelector('h3')?.textContent?.trim() || 'this deck';
       if(!confirm(`Delete "${title}"? This cannot be undone.`)){
@@ -271,19 +271,19 @@ document.querySelectorAll('.session-start').forEach(btn=>{
       }
     });
   });
-  </script>
 
-  <script>
-    document.querySelectorAll('form.delete-session-form').forEach(form=>{
-      form.addEventListener('submit', (e)=>{
-        const title = form.closest('.deck-card')?.querySelector('h3')?.textContent?.trim() || 'this session';
-        if(!confirm(`Delete "${title}" session? This cannot be undone.`)){
-          e.preventDefault();
-        }
-      });
+  // session delete confirm
+  document.querySelectorAll('form.delete-session-form').forEach(form=>{
+    form.addEventListener('submit', (e)=>{
+      const title = form.closest('.deck-card')?.querySelector('h3')?.textContent?.trim() || 'this session';
+      if(!confirm(`Delete "${title}" session? This cannot be undone.`)){
+        e.preventDefault();
+      }
     });
+  });
 
-    async function fetchProgress(id) {
+  // progress poller
+  async function fetchProgress(id) {
     try {
       const r = await fetch(`/sessions/${id}/progress/`, { credentials: 'same-origin' });
       const j = await r.json();
@@ -311,6 +311,7 @@ document.querySelectorAll('.session-start').forEach(btn=>{
       console.error("Progress fetch failed", e);
     }
   }
+
   document.querySelectorAll("[id^='session-']").forEach(card => {
     const id = card.id.replace("session-", "");
     fetchProgress(id);
@@ -323,13 +324,13 @@ document.querySelectorAll('.session-start').forEach(btn=>{
     const c = document.cookie.match(/(^|;\s*)csrftoken=([^;]+)/);
     return c ? decodeURIComponent(c[2]) : '';
   }
-  
+
   // QUIZ RESTART
   document.querySelectorAll('.quiz-restart').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
       const id = btn.dataset.sessionId;
       if (!confirm('Restart this quiz? Score and progress will be reset.')) return;
-  
+
       try {
         const r = await fetch(`/sessions/${id}/restart_quiz/`, {
           method: 'POST',
@@ -352,9 +353,9 @@ document.querySelectorAll('.session-start').forEach(btn=>{
       }
     });
   });
-
 </script>
 {% endblock %}
+
 
 {% block head %}
 <style>

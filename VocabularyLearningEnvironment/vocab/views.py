@@ -19,7 +19,7 @@ from components.teacher.items import WordItem
 from components.learners.exp_memory import ExpMemoryLearner
 from components.teacher.planners import RandomPlanner
 from .forms import MemberForm, StudySessionForm
-from .models import Member, QuizList, UserAnswer, UserMemory, Vocabulary, VocabularyList, StudySession, DailyReviewCounter, ActiveStudySession, DailyMinuteCounter
+from .models import Member, QuizList, UserAnswer, UserMemory, Vocabulary, VocabularyList, StudySession, DailyReviewCounter, ActiveStudySession, DailyMinuteCounter, QuizHistory
 from django.contrib import messages
 from django.shortcuts import redirect
 from django.utils import timezone
@@ -648,12 +648,11 @@ def create_quiz_list(user, question_count):
     return quiz_list
 
 def save_quiz_to_history(user, quiz_list):
-    previous_attempts = QuizHistory.objects.filter(user=user, name=quiz_list.name).count()
+    previous_attempts = QuizHistory.objects.filter(user=user, name=StudySession.name).count()
     attempt_number = previous_attempts + 1
 
     QuizHistory.objects.create(
         user=user,
-        name=f"{quiz_list.name}",
         score=quiz_list.score,
         question_count=quiz_list.question_count,
         attempt=attempt_number
