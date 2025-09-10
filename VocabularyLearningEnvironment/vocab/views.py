@@ -148,6 +148,7 @@ def choose_random_word(user, session):
             deck = QuizList.objects.select_for_update().get(pk=session.quiz_list.id)
 
             if deck.asked_count >= deck.question_count:
+                _reset_quiz_flags(user, deck.id)
                 return {"status": "done", "message": "Quiz complete.", "score": deck.score, "total": deck.question_count }
 
             vocab_qs = Vocabulary.objects.filter(
@@ -158,7 +159,8 @@ def choose_random_word(user, session):
 
             if not vocab_qs.exists():
                 QuizList.objects.filter(pk=deck.id).update(asked_count=F("question_count"))
-                return {"status": "done", "message": "Quiz complete."}
+                _reset_quiz_flags(user, deck.id)
+                return {"status": "done", "message": "Quiz complete.","score": deck.score, "total": deck.question_count}
 
             chosen_vocab = vocab_qs.order_by("?").first()
             question = chosen_vocab.source_word
@@ -170,8 +172,10 @@ def choose_random_word(user, session):
                 id=deck.id,
                 asked_count__lt=F("question_count")
             ).update(asked_count=F("asked_count") + 1)
+            
             if updated == 0:
-                return {"status": "done", "message": "Quiz complete."}
+                _reset_quiz_flags(user, deck.id)
+                return {"status": "done", "message": "Quiz complete.","score": deck.score, "total": deck.question_count}
 
         return {
             "status": "ok",
@@ -386,10 +390,11 @@ def study_sessions(request):
                     return render(request, "vocab/study_sessions.html", {"form": form, "sessions": sessions})
             else:
                 session.save()
-                messages.success(request, "Session created.")
+
+            messages.success(request, "Session created.")
             return redirect("study_sessions")
-        else:
-            form = StudySessionForm(user=member)
+    else:
+        form = StudySessionForm(user=member)
 
     sessions = StudySession.objects.filter(user=member).order_by("-created_at")
     return render(request, "vocab/study_sessions.html", {"form": form, "sessions": sessions})
@@ -559,6 +564,7 @@ def update_study_time(request):
 
 @require_POST
 @login_required
+@transaction.atomic
 def delete_session(request, session_id):
     session = get_object_or_404(StudySession, id=session_id, user=request.user)
 
@@ -585,7 +591,12 @@ def delete_session(request, session_id):
                 DailyMinuteCounter.objects.filter(pk=counter.pk).update(
                     minutes=F("minutes") + full_minutes
                 )
-        active.delete()
+            active.delete()
+    if session.goal_type == "quiz" and session.quiz_list_id:
+        qid = session.quiz_list_id
+        _reset_quiz_flags(request.user, qid)
+        Vocabulary.objects.filter(quiz_list_id=qid).update(quiz_list=None)
+        
     session.delete()
     return redirect("user_page")
 

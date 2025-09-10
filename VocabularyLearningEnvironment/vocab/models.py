@@ -23,7 +23,7 @@ class QuizList(models.Model):
     score = models.IntegerField(default=0)
     question_count = models.IntegerField(default=0)
     asked_count = models.IntegerField(default=0)
-    
+   
     def __str__(self):
         return self.user.username + "'s quiz"
     
@@ -163,9 +163,15 @@ class ActiveStudySession(models.Model):
         indexes = [models.Index(fields=["user", "started_at"])]
 
     def get_elapsed_minutes(self):
-        from django.utils import timezone
         elapsed = timezone.now() - self.started_at
         return int(elapsed.total_seconds() / 60)
-    
-    
-    
+
+class QuizHistory(models.Model):
+    user = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="quiz_lists")
+    score = models.IntegerField(default=0)
+    question_count = models.IntegerField(default=0)
+    attempt = models.IntegerField(default=1)
+    name = models.CharField(max_length = 200)
+   
+    def __str__(self):
+        return self.name + "-attempt: " + self.attempt + "(User: " + self.user.username + ")"
