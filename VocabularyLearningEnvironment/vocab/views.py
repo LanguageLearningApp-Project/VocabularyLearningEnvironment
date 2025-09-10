@@ -35,6 +35,8 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 
 planner = RandomPlanner()
 
+def _reset_quiz_flags(user, quiz_list_id: int):
+    UserMemory.objects.filter(user=user,vocabulary__quiz_list_id=quiz_list_id,is_asked_in_quiz=True).update(is_asked_in_quiz=False)
 
 @login_required
 def session_info(request, session_id):
@@ -657,6 +659,9 @@ def save_quiz_to_history(user, quiz_list):
         attempt=attempt_number
     )
 
+@require_POST
+@login_required
+@transaction.atomic
 def restart_quiz(request, session_id):
     member = request.user
     session = get_object_or_404(StudySession, id=session_id, user=request.user, goal_type="quiz")

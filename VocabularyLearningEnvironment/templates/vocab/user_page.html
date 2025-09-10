@@ -53,7 +53,7 @@
         {% endif %}
       </div>
       <div class="deck-actions">
-        <form method="post" action="{% url 'delete_list' deck.id %}">
+        <form method="post" action="{% url 'delete_list' deck.id %}" class = "delete-form">
           {% csrf_token %}
           <button type="submit" class="delete-btn">Delete</button>
         </form>
@@ -205,16 +205,17 @@ const parent = vocabField?.parentNode;
 function toggleFields() {
   const isQuiz = goalTypeSelect && goalTypeSelect.value === "quiz";
 
-  if (vocabField && vocabField.parentNode) {
-    vocabField.parentNode.removeChild(vocabField);
-  }
-  if (quizField && quizField.parentNode) {
-    quizField.parentNode.removeChild(quizField);
-  }
+  [vocabField, quizField].forEach(el => {
+    if (!el) return;
+    el.style.display = "none";
+    if (el.parentNode) el.parentNode.removeChild(el);
+  });
 
   if (isQuiz && quizField) {
+    quizField.style.display = "";
     parent.insertBefore(quizField, parent.querySelector("br") || null);
   } else if (!isQuiz && vocabField) {
+    vocabField.style.display = "";
     parent.insertBefore(vocabField, parent.querySelector("br") || null);
   }
 }
@@ -315,6 +316,43 @@ document.querySelectorAll('.session-start').forEach(btn=>{
     fetchProgress(id);
     setInterval(() => fetchProgress(id), 5000);
   });
+
+  function getCSRF() {
+    const m = document.querySelector('meta[name="csrf-token"]');
+    if (m && m.content && m.content !== 'NOTPROVIDED') return m.content;
+    const c = document.cookie.match(/(^|;\s*)csrftoken=([^;]+)/);
+    return c ? decodeURIComponent(c[2]) : '';
+  }
+  
+  // QUIZ RESTART
+  document.querySelectorAll('.quiz-restart').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.dataset.sessionId;
+      if (!confirm('Restart this quiz? Score and progress will be reset.')) return;
+  
+      try {
+        const r = await fetch(`/sessions/${id}/restart_quiz/`, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'X-CSRFToken': getCSRF(),
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: ''
+        });
+        const j = await r.json().catch(()=>({}));
+        if (!r.ok) {
+          alert(j.message || 'Could not reset quiz.');
+          return;
+        }
+        alert(`Quiz reset. ${j.question_count} questions ready.`);
+      } catch (err) {
+        console.error(err);
+        alert('Network error while resetting the quiz.');
+      }
+    });
+  });
+
 </script>
 {% endblock %}
 

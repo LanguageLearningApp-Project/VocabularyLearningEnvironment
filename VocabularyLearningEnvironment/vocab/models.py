@@ -167,7 +167,7 @@ class ActiveStudySession(models.Model):
         return int(elapsed.total_seconds() / 60)
 
 class QuizHistory(models.Model):
-    user = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="quiz_lists")
+    user = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="quiz_histories")
     score = models.IntegerField(default=0)
     question_count = models.IntegerField(default=0)
     attempt = models.IntegerField(default=1)
