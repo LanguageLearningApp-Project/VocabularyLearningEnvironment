@@ -24,5 +24,6 @@ urlpatterns = [
     path("sessions/<int:session_id>/delete/", views.delete_session, name="delete_session"),
     path("sessions/<int:session_id>/progress/", views.progress_check, name="progress_check"),
     path("sessions/<int:session_id>/restart_quiz/", views.restart_quiz, name="restart_quiz"),
+    path("sessions/<int:session_id>/quiz_status/", views.quiz_status, name="quiz_status"),
     path('quiz/', views.home, name="quiz"),
 ]

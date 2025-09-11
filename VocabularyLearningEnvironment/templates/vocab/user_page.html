@@ -152,7 +152,9 @@
   <h2 class="section-title">Quiz Sessions</h2>
   <div class="deck-container">
     {% for s in quiz_sessions %}
-    <div class="deck-card quiz-session-card" id="quiz-session-{{ s.id }}">
+    <div class="deck-card quiz-session-card"
+    id="quiz-session-{{ s.id }}"
+    data-running="{{ s.is_running_today|yesno:'true,false' }}">
       <h3>{{ s.name }}</h3>
       <h4>
         Quiz from Memory<br>
@@ -161,27 +163,20 @@
       </h4>
       <div class="deck-actions">
         {% if s.is_running_today %}
-          <button class="deck-btn quiz-start"
-            data-session-id="{{ s.id }}">
-            Start Quiz
-          </button>
+          <button class="deck-btn quiz-start" data-session-id="{{ s.id }}">Start Quiz</button>
         {% else %}
           <span class="status-badge ended-badge">Ended</span>
         {% endif %}
       
         <form method="post" action="{% url 'delete_session' s.id %}" class="delete-session-form" style="display:inline;">
           {% csrf_token %}
-          <button type="submit" class="delete-btn" aria-label="Delete quiz session {{ s.name }}">
-            Delete Quiz
-          </button>
+          <button type="submit" class="delete-btn" aria-label="Delete quiz session {{ s.name }}">Delete Quiz</button>
         </form>
       </div>
-
-      <button class="deck-btn quiz-restart"
-        style="margin-top: 10px;"
-        data-session-id="{{ s.id }}">
+      
+      <button class="deck-btn quiz-restart" data-session-id="{{ s.id }}" style="margin-top:10px; display:none;">
         Restart
-  </button>
+      </button>
     </div>
     {% empty %}
       <p class="no-items-message">No quiz sessions yet.</p>
@@ -282,6 +277,36 @@
     });
   });
 
+  async function updateQuizButtons(sessionId) {
+    try {
+      const r = await fetch(`/sessions/${sessionId}/quiz_status/`, { credentials: 'same-origin' });
+      const j = await r.json();
+      const card = document.getElementById(`quiz-session-${sessionId}`);
+      if (!card || !j.has_quiz) return;
+  
+      const startBtn   = card.querySelector('.quiz-start');
+      const restartBtn = card.querySelector('.quiz-restart');
+      const canStartToday = (card.dataset.running === 'true');
+  
+      if (j.is_complete) {
+        if (startBtn)   startBtn.style.display = 'none';
+        if (restartBtn) restartBtn.style.display = '';
+      } else {
+        if (restartBtn) restartBtn.style.display = 'none';
+        if (startBtn)   startBtn.style.display = canStartToday ? '' : 'none';
+      }
+    } catch (e) {
+      console.error('quiz_status failed', e);
+    }
+  }
+  
+  
+  // Call it for each quiz card on load
+  document.querySelectorAll("[id^='quiz-session-']").forEach(card => {
+    const id = card.id.replace("quiz-session-", "");
+    updateQuizButtons(id);
+  });  
+
   // progress poller
   async function fetchProgress(id) {
     try {
@@ -325,7 +350,6 @@
     return c ? decodeURIComponent(c[2]) : '';
   }
 
-  // QUIZ RESTART
   document.querySelectorAll('.quiz-restart').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
       const id = btn.dataset.sessionId;
@@ -341,11 +365,24 @@
           },
           body: ''
         });
+
         const j = await r.json().catch(()=>({}));
         if (!r.ok) {
           alert(j.message || 'Could not reset quiz.');
           return;
         }
+
+        const card = document.getElementById(`quiz-session-${id}`);
+        if (card) {
+          const startBtn   = card.querySelector('.quiz-start');
+          const restartBtn = card.querySelector('.quiz-restart');
+
+          const canStartToday = (card.dataset.running === 'true');
+
+          if (restartBtn) restartBtn.style.display = 'none';
+          if (startBtn)   startBtn.style.display   = canStartToday ? '' : 'none';
+        }
+
         alert(`Quiz reset. ${j.question_count} questions ready.`);
       } catch (err) {
         console.error(err);

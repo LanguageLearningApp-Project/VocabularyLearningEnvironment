@@ -19,7 +19,7 @@ from components.teacher.items import WordItem
 from components.learners.exp_memory import ExpMemoryLearner
 from components.teacher.planners import RandomPlanner
 from .forms import MemberForm, StudySessionForm
-from .models import Member, QuizList, QuizHistory, UserAnswer, UserMemory, Vocabulary, VocabularyList, StudySession, DailyReviewCounter, ActiveStudySession, DailyMinuteCounter
+from .models import Member, QuizList, UserAnswer, UserMemory, Vocabulary, VocabularyList, StudySession, DailyReviewCounter, ActiveStudySession, DailyMinuteCounter, QuizHistory
 from django.contrib import messages
 from django.shortcuts import redirect
 from django.utils import timezone
@@ -676,5 +676,16 @@ def restart_quiz(request, session_id):
 
     UserMemory.objects.filter(user=request.user, vocabulary__quiz_list=old_quiz).update(is_asked_in_quiz=False)
 
-    data = choose_random_word(member, session)
-    return JsonResponse(data)
+    return JsonResponse({"status": "ok","message": "Quiz reset.","quiz_list_id": old_quiz.id,"question_count": old_quiz.question_count})
+
+def quiz_status(request, session_id):
+    session = get_object_or_404(StudySession, id=session_id, user=request.user, goal_type="quiz")
+    deck = session.quiz_list
+    if not deck:
+        return JsonResponse({"has_quiz": False})
+    return JsonResponse({
+        "has_quiz": True,
+        "is_complete": deck.asked_count >= deck.question_count,
+        "score": deck.score,
+        "total": deck.question_count,
+    })

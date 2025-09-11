@@ -6,7 +6,7 @@ from django.contrib.admin.models import LogEntry
 
 from .models import (
     Vocabulary, Member, VocabularyList, UserAnswer,
-    UserMemory, StudySession, DailyReviewCounter, DailyMinuteCounter, QuizList
+    UserMemory, StudySession, DailyReviewCounter, DailyMinuteCounter, QuizList, QuizHistory
 )
 
 admin.site.register(Vocabulary)
@@ -18,6 +18,7 @@ admin.site.register(StudySession)
 admin.site.register(DailyReviewCounter)
 admin.site.register(DailyMinuteCounter)
 admin.site.register(QuizList)
+admin.site.register(QuizHistory)
 
 class SuperuserOnlyAdmin(admin.ModelAdmin):
     def _ok(self, request):
