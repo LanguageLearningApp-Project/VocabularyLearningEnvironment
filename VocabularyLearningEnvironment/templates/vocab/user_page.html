@@ -219,44 +219,47 @@ if (goalTypeSelect) {
   toggleFields(); 
 }
 
-  // normal study session start
-  document.querySelectorAll('.session-start').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-      const id = btn.dataset.sessionId;
-      const deckId = btn.dataset.deckId;
-      try {
-        const r = await fetch(`/sessions/${id}/start/`, { credentials: 'same-origin' });
-        if (!r.ok) {
-          const j = await r.json().catch(() => ({}));
-          alert(j.message || 'This session cannot be started.');
-          return;
-        }
-        window.location.href = `{% url 'home' %}?deck_id=${deckId}&session_id=${id}`;
-      } catch (err) {
-        console.error(err);
-        alert('An error occurred while starting the session.');
+// normal study session start
+document.querySelectorAll('.session-start').forEach(btn=>{
+  btn.addEventListener('click', async ()=>{
+    const id = btn.dataset.sessionId;
+    try {
+      const r = await fetch(`/sessions/${id}/start/`, { credentials: 'same-origin' });
+      const data = await r.json();
+      if (!r.ok || data.status !== "started") {
+        alert(data.message || 'This session cannot be started.');
+        return;
       }
-    });
+      // Şimdi sadece yönlendir
+      window.location.href = `{% url 'home' %}?session_id=${id}`;
+      // NOT: deck_id parametresine artık gerek yok, backend session_id'den anlar
+    } catch (err) {
+      console.error(err);
+      alert('An error occurred while starting the session.');
+    }
   });
+});
 
-  // quiz session start
-  document.querySelectorAll('.quiz-start').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-      const id = btn.dataset.sessionId;
-      try {
-        const r = await fetch(`/sessions/${id}/start/`, { credentials: 'same-origin' });
-        if (!r.ok) {
-          const j = await r.json().catch(() => ({}));
-          alert(j.message || 'This quiz session cannot be started.');
-          return;
-        }
-        window.location.href = `/quiz/?session_id=${id}`;
-      } catch (err) {
-        console.error(err);
-        alert('An error occurred while starting the quiz.');
+
+// quiz session start
+document.querySelectorAll('.quiz-start').forEach(btn=>{
+  btn.addEventListener('click', async ()=>{
+    const id = btn.dataset.sessionId;
+    try {
+      const r = await fetch(`/sessions/${id}/start/`, { credentials: 'same-origin' });
+      const data = await r.json();
+      if (!r.ok || data.status !== "started") {
+        alert(data.message || 'This quiz session cannot be started.');
+        return;
       }
-    });
+      window.location.href = `/quiz/?session_id=${id}`;
+    } catch (err) {
+      console.error(err);
+      alert('An error occurred while starting the quiz.');
+    }
   });
+});
+
 
   // deck delete confirm
   document.querySelectorAll('form.delete-form').forEach(form=>{

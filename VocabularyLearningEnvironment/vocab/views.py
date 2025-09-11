@@ -434,8 +434,8 @@ def start_session(request, session_id):
         )
         DailyReviewCounter.objects.filter(pk=counter.pk).update(count=F("count") + 1)
 
-    data = choose_random_word(member, session)
-    return JsonResponse(data)
+    #data = choose_random_word(member, session)
+    return JsonResponse({"status": "started", "session_id": session.id})
 
 
 @login_required
