@@ -26,7 +26,7 @@ class QuizList(models.Model):
     asked_count = models.IntegerField(default=0)
    
     def __str__(self):
-        return self.user.username + "'s quiz"
+        return f"{(self.name or '').strip()} {self.user.username}'s quiz"
     
     @property
     def is_complete(self):

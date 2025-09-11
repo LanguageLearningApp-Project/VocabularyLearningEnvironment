@@ -89,7 +89,8 @@ def user_page(request):
                     })
                 with transaction.atomic():
                     quiz_list = create_quiz_list(user=member, question_count=session.goal_value)
-                    quiz_list.name = session.name
+                    quiz_list.name = session.name or ""            
+                    quiz_list.save(update_fields=["name"])   
                     session.quiz_list = quiz_list
                     session.save()
 
