@@ -188,35 +188,36 @@
 
 {% block extra_js %}
 <script>
-  const goalTypeSelect = document.querySelector("#id_goal_type");
+    const goalTypeSelect = document.querySelector("#id_goal_type");
   const vocabField = document.getElementById("vocab-list-field");
-  const quizField  = document.getElementById("quiz-list-field");
+  const quizField = document.getElementById("quiz-list-field");
 
-  // her çağrıda parent'ı güvenli al
+  const vocabSelect = document.querySelector("#id_vocabulary_list") || (vocabField && vocabField.querySelector("select"));
+  const quizSelect  = document.querySelector("#id_quiz_list")       || (quizField  && quizField.querySelector("select"));
+
+const parent = vocabField?.parentNode;
+
   function toggleFields() {
     const isQuiz = goalTypeSelect && goalTypeSelect.value === "quiz";
-    const parent = document.querySelector(".deck_inputs");
-    if (!parent) return;
 
-    [vocabField, quizField].forEach(el => {
-      if (!el) return;
-      el.style.display = "none";
-      if (el.parentNode) el.parentNode.removeChild(el);
-    });
+    if (vocabField && vocabField.parentNode) {
+      vocabField.parentNode.removeChild(vocabField);
+    }
+    if (quizField && quizField.parentNode) {
+      quizField.parentNode.removeChild(quizField);
+    }
 
     if (isQuiz && quizField) {
-      quizField.style.display = "";
       parent.insertBefore(quizField, parent.querySelector("br") || null);
     } else if (!isQuiz && vocabField) {
-      vocabField.style.display = "";
       parent.insertBefore(vocabField, parent.querySelector("br") || null);
     }
   }
 
-  if (goalTypeSelect) {
-    goalTypeSelect.addEventListener("change", toggleFields);
-    toggleFields();
-  }
+if (goalTypeSelect) {
+  goalTypeSelect.addEventListener("change", toggleFields);
+  toggleFields(); 
+}
 
   // normal study session start
   document.querySelectorAll('.session-start').forEach(btn=>{

@@ -20,6 +20,7 @@ class VocabularyList(models.Model):
     
 class QuizList(models.Model):
     user = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="quiz_lists")
+    name = models.CharField(max_length=255, blank=True, null=True)
     score = models.IntegerField(default=0)
     question_count = models.IntegerField(default=0)
     asked_count = models.IntegerField(default=0)
@@ -175,4 +176,4 @@ class QuizHistory(models.Model):
     
    
     def __str__(self):
-         return f"{self.name} - attempt: {self.attempt} (User: {self.user.username})"
+        return self.name + " - attempt:" + str(self.attempt) + " (User: " + self.user.username + ")"
