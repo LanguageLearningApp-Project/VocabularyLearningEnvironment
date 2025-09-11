@@ -151,7 +151,7 @@ def choose_random_word(user, session):
             deck = QuizList.objects.select_for_update().get(pk=session.quiz_list.id)
 
             if deck.asked_count >= deck.question_count:
-                save_quiz_to_history(user, deck)
+                save_quiz_to_history(user, deck, session)
                 _reset_quiz_flags(user, deck.id)
                 return {"status": "done", "message": "Quiz complete.", "score": deck.score, "total": deck.question_count }
 
@@ -648,15 +648,16 @@ def create_quiz_list(user, question_count):
     
     return quiz_list
 
-def save_quiz_to_history(user, quiz_list):
-    previous_attempts = QuizHistory.objects.filter(user=user, name=StudySession.name).count()
+def save_quiz_to_history(user, quiz_list, session):
+    previous_attempts = QuizHistory.objects.filter(user=user, name=session.name).count()
     attempt_number = previous_attempts + 1
 
     QuizHistory.objects.create(
         user=user,
         score=quiz_list.score,
         question_count=quiz_list.question_count,
-        attempt=attempt_number
+        attempt=attempt_number,
+        name = session.name
     )
 
 @require_POST
