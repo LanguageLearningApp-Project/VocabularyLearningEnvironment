@@ -18,20 +18,9 @@ from django.views.decorators.http import require_POST
 from components.teacher.items import WordItem
 from components.learners.exp_memory import ExpMemoryLearner
 from components.teacher.planners import RandomPlanner
+
 from .forms import MemberForm, StudySessionForm
-from .models import Member, QuizList, UserAnswer, UserMemory, Vocabulary, VocabularyList, StudySession, DailyReviewCounter, ActiveStudySession, DailyMinuteCounter, QuizHistory
-from django.contrib import messages
-from django.shortcuts import redirect
-from django.utils import timezone
-import unicodedata, re
-from django.views.decorators.http import require_POST
-from django.db import OperationalError, transaction
-from django.db.models import F
-from django.contrib.auth import authenticate, login 
-from django.contrib.auth import logout 
-from django.contrib.auth.decorators import login_required
-from datetime import timedelta
-from django.views.decorators.csrf import ensure_csrf_cookie
+from .models import (Member,QuizList,UserAnswer,UserMemory,Vocabulary,VocabularyList,StudySession,DailyReviewCounter,ActiveStudySession,DailyMinuteCounter,QuizHistory)
 
 planner = RandomPlanner()
 
@@ -418,11 +407,12 @@ def start_session(request, session_id):
             status=400,
         )
 
-    has_words = Vocabulary.objects.filter(
-        vocabulary_list=session.vocabulary_list
-    ).exists()
-    if not has_words:
-        return JsonResponse({"status": "error", "message": "This deck is empty."})
+    if session.goal_type != "quiz":
+        has_words = Vocabulary.objects.filter(
+            vocabulary_list=session.vocabulary_list
+        ).exists()
+        if not has_words:
+            return JsonResponse({"status": "error", "message": "This deck is empty."})
 
     if session.goal_type == "reviews_per_day":
         today = timezone.localdate()
@@ -434,11 +424,10 @@ def start_session(request, session_id):
         )
         DailyReviewCounter.objects.filter(pk=counter.pk).update(count=F("count") + 1)
 
-    #data = choose_random_word(member, session)
     return JsonResponse({"status": "started", "session_id": session.id})
 
-
 @login_required
+@require_POST
 def reverse_privacy(request, deck_id):
     member = request.user
 
@@ -531,7 +520,9 @@ def get_study_time_status(request):
         }
     )
 
-
+@require_POST
+@login_required
+@transaction.atomic
 def update_study_time(request):
     active = (
         ActiveStudySession.objects.select_for_update()
@@ -680,6 +671,7 @@ def restart_quiz(request, session_id):
 
     return JsonResponse({"status": "ok","message": "Quiz reset.","quiz_list_id": old_quiz.id,"question_count": old_quiz.question_count})
 
+@login_required
 def quiz_status(request, session_id):
     session = get_object_or_404(StudySession, id=session_id, user=request.user, goal_type="quiz")
     deck = session.quiz_list

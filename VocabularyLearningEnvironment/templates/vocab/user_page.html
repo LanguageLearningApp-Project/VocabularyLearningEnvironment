@@ -344,7 +344,7 @@ document.querySelectorAll('.quiz-start').forEach(btn=>{
   document.querySelectorAll("[id^='session-']").forEach(card => {
     const id = card.id.replace("session-", "");
     fetchProgress(id);
-    setInterval(() => fetchProgress(id), 5000);
+    setInterval(() => fetchProgress(id), 10000); //every ten seconds, the progress is updated
   });
 
   function getCSRF() {
