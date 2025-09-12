@@ -16,7 +16,7 @@ class VocabularyList(models.Model):
     is_public = models.BooleanField(default=False)
 
     def __str__(self):
-        return self.list_name
+        return "User:" + self.user.username + " - Deck:" + self.list_name
     
 class QuizList(models.Model):
     user = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="quiz_lists")
@@ -51,11 +51,10 @@ class UserAnswer(models.Model):
     question = models.ForeignKey(Vocabulary, on_delete=models.CASCADE)
     user = models.ForeignKey(Member, on_delete=models.CASCADE)
     given_answer = models.CharField(max_length=100)
-    answer_time = models.IntegerField(default=0)
     is_correct = models.BooleanField(default=False)
 
     def __str__(self):
-        return "User " + str(self.user.username) + " - Question " + str(self.question_id)
+        return "User " + str(self.user.username) + " - Question " + str(self.question.source_word)
 
 
 class UserMemory(models.Model):

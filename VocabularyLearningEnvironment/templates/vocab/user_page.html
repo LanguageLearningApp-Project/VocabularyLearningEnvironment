@@ -173,10 +173,10 @@
           <button type="submit" class="delete-btn" aria-label="Delete quiz session {{ s.name }}">Delete Quiz</button>
         </form>
       </div>
-      
+
       <button class="deck-btn quiz-restart" data-session-id="{{ s.id }}" style="margin-top:10px; display:none;">
         Restart
-      </button>
+  </button>
     </div>
     {% empty %}
       <p class="no-items-message">No quiz sessions yet.</p>
@@ -188,7 +188,7 @@
 
 {% block extra_js %}
 <script>
-    const goalTypeSelect = document.querySelector("#id_goal_type");
+  const goalTypeSelect = document.querySelector("#id_goal_type");
   const vocabField = document.getElementById("vocab-list-field");
   const quizField = document.getElementById("quiz-list-field");
 
@@ -219,46 +219,45 @@ if (goalTypeSelect) {
   toggleFields(); 
 }
 
-// normal study session start
-document.querySelectorAll('.session-start').forEach(btn=>{
-  btn.addEventListener('click', async ()=>{
-    const id = btn.dataset.sessionId;
-    try {
-      const r = await fetch(`/sessions/${id}/start/`, { credentials: 'same-origin' });
+  // normal study session start
+  document.querySelectorAll('.session-start').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.dataset.sessionId;
+      try {
+        const r = await fetch(`/sessions/${id}/start/`, { credentials: 'same-origin' });
       const data = await r.json();
       if (!r.ok || data.status !== "started") {
         alert(data.message || 'This session cannot be started.');
-        return;
-      }
+          return;
+        }
       // Şimdi sadece yönlendir
       window.location.href = `{% url 'home' %}?session_id=${id}`;
       // NOT: deck_id parametresine artık gerek yok, backend session_id'den anlar
-    } catch (err) {
-      console.error(err);
-      alert('An error occurred while starting the session.');
-    }
+      } catch (err) {
+        console.error(err);
+        alert('An error occurred while starting the session.');
+      }
+    });
   });
-});
 
-
-// quiz session start
-document.querySelectorAll('.quiz-start').forEach(btn=>{
-  btn.addEventListener('click', async ()=>{
-    const id = btn.dataset.sessionId;
-    try {
-      const r = await fetch(`/sessions/${id}/start/`, { credentials: 'same-origin' });
+  // quiz session start
+  document.querySelectorAll('.quiz-start').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.dataset.sessionId;
+      try {
+        const r = await fetch(`/sessions/${id}/start/`, { credentials: 'same-origin' });
       const data = await r.json();
       if (!r.ok || data.status !== "started") {
         alert(data.message || 'This quiz session cannot be started.');
-        return;
+          return;
+        }
+        window.location.href = `/quiz/?session_id=${id}`;
+      } catch (err) {
+        console.error(err);
+        alert('An error occurred while starting the quiz.');
       }
-      window.location.href = `/quiz/?session_id=${id}`;
-    } catch (err) {
-      console.error(err);
-      alert('An error occurred while starting the quiz.');
-    }
+    });
   });
-});
 
 
   // deck delete confirm
@@ -309,7 +308,7 @@ document.querySelectorAll('.quiz-start').forEach(btn=>{
   document.querySelectorAll("[id^='quiz-session-']").forEach(card => {
     const id = card.id.replace("quiz-session-", "");
     updateQuizButtons(id);
-  });  
+  });
 
   // progress poller
   async function fetchProgress(id) {
