@@ -140,11 +140,6 @@ def choose_random_word(user, session):
         with transaction.atomic():
             deck = QuizList.objects.select_for_update().get(pk=session.quiz_list.id)
 
-            if deck.asked_count >= deck.question_count:
-                save_quiz_to_history(user, deck, session)
-                _reset_quiz_flags(user, deck.id)
-                return {"status": "done", "message": "Quiz complete.", "score": deck.score, "total": deck.question_count }
-
             vocab_qs = Vocabulary.objects.filter(
                 quiz_list=deck,
                 usermemory__user=user,
@@ -154,7 +149,12 @@ def choose_random_word(user, session):
             if not vocab_qs.exists():
                 QuizList.objects.filter(pk=deck.id).update(asked_count=F("question_count"))
                 _reset_quiz_flags(user, deck.id)
-                return {"status": "done", "message": "Quiz complete.","score": deck.score, "total": deck.question_count}
+                return {
+                    "status": "done",
+                    "message": "Quiz complete.",
+                    "score": deck.score,
+                    "total": deck.question_count
+                }
 
             chosen_vocab = vocab_qs.order_by("?").first()
             question = chosen_vocab.source_word
@@ -166,10 +166,28 @@ def choose_random_word(user, session):
                 id=deck.id,
                 asked_count__lt=F("question_count")
             ).update(asked_count=F("asked_count") + 1)
-            
-            if updated == 0:
+
+            deck.refresh_from_db(fields=["asked_count", "score", "question_count"])
+
+            if deck.asked_count >= deck.question_count:
+                last = QuizHistory.objects.filter(user=user, name=session.name).order_by('-attempt').first()
+                attempt_number = (last.attempt if last else 0) + 1
+                if not QuizHistory.objects.filter(user=user, name=session.name, attempt=attempt_number).exists():
+                    QuizHistory.objects.create(
+                        user=user,
+                        score=deck.score,
+                        question_count=deck.question_count,
+                        attempt=attempt_number,
+                        name=session.name
+                    )
+
                 _reset_quiz_flags(user, deck.id)
-                return {"status": "done", "message": "Quiz complete.","score": deck.score, "total": deck.question_count}
+                return {
+                    "status": "done",
+                    "message": "Quiz complete.",
+                    "score": deck.score,
+                    "total": deck.question_count
+                }
 
         return {
             "status": "ok",
@@ -177,6 +195,7 @@ def choose_random_word(user, session):
             "translation": translation,
             "question_id": chosen_vocab.id
         }
+
     deck = session.vocabulary_list
     vocab_qs = Vocabulary.objects.filter(vocabulary_list=deck)
 

@@ -78,6 +78,7 @@
 
 {% block extra_js %}
 <script>
+let quizFinished = false;
 function getCSRF() {
   const m = document.querySelector('meta[name="csrf-token"]');
   if (m && m.content && m.content !== 'NOTPROVIDED') return m.content;
@@ -212,6 +213,7 @@ async function loadWord() {
     const data = await res.json();
 
     if (data.status === "done") {
+      quizFinished = true;
       const score = (typeof data.score === "number") ? data.score : 0;
       const total = (typeof data.total === "number") ? data.total : 0;
       box.innerHTML = `
@@ -254,6 +256,9 @@ checkBtn.addEventListener("click", async () => {
   } else {
     answerEl.style.backgroundColor = "rgba(255, 182, 193, 0.6)";
   }
+
+  if (quizFinished) return;
+
   setTimeout(() => {
     answerEl.value = "";
     answerEl.style.backgroundColor = "";
@@ -261,6 +266,7 @@ checkBtn.addEventListener("click", async () => {
     loadWord();
   }, 500);
 });
+
 
 let heartbeatId = null;
 let ending = false;
