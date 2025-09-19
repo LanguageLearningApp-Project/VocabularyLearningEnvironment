@@ -147,7 +147,6 @@ def choose_random_word(user, session):
             )
 
             if not vocab_qs.exists():
-
                 return {
                     "status": "done",
                     "message": "Quiz complete.",
@@ -156,36 +155,17 @@ def choose_random_word(user, session):
                 }
 
             chosen_vocab = vocab_qs.order_by("?").first()
-            UserMemory.objects.filter(user=user, vocabulary=chosen_vocab).update(is_asked_in_quiz=True)
 
-            updated = QuizList.objects.filter(
-                id=deck.id,
-                asked_count__lt=F("question_count")
-            ).update(asked_count=F("asked_count") + 1)
-
-            deck.refresh_from_db(fields=["asked_count", "score", "question_count"])
-
-            if deck.asked_count + 1 >= deck.question_count:
-                last = QuizHistory.objects.filter(user=user, name=session.name).order_by('-attempt').first()
-                attempt_number = (last.attempt if last else 0) + 1
-                if not QuizHistory.objects.filter(user=user, name=session.name, attempt=attempt_number).exists():
-                    QuizHistory.objects.create(
-                        user=user,
-                        score=deck.score,
-                        question_count=deck.question_count,
-                        attempt=attempt_number,
-                        name=session.name
-                    )
-
-                _reset_quiz_flags(user, deck.id)
+            UserMemory.objects.filter(user=user, vocabulary=chosen_vocab).update(
+                is_asked_in_quiz=True
+            )
 
         return {
             "status": "ok",
-            "word": question,
-            "translation": translation,
+            "word": chosen_vocab.source_word,
+            "translation": chosen_vocab.target_word,
             "question_id": chosen_vocab.id
         }
-
     deck = session.vocabulary_list
     vocab_qs = Vocabulary.objects.filter(vocabulary_list=deck)
 
@@ -194,7 +174,6 @@ def choose_random_word(user, session):
 
     item_list = []
     vocab_dict = {}
-
     for vocab in vocab_qs:
         word_item = WordItem(source=vocab.source_word, target=vocab.target_word)
         item_list.append(word_item)
@@ -209,7 +188,6 @@ def choose_random_word(user, session):
     learner = ExpMemoryLearner.load_memory_from_db(user, alpha=0.1, beta=0.5)
     learner.learn(chosen_item, chosen_vocab.id, now_seconds)
     learner.save_memory_to_db_with_retry(user)
-    
 
     return {
         "status": "ok",
@@ -217,6 +195,7 @@ def choose_random_word(user, session):
         "translation": translation,
         "question_id": chosen_vocab.id
     }
+
 
 @login_required
 def random_word_view(request):
@@ -336,6 +315,7 @@ def _is_correct(given: str, expected: str) -> bool:
 
 @require_POST
 @login_required
+@transaction.atomic
 def submit_answer(request):
     user = request.user
     question_id = request.POST.get("question_id")
@@ -344,32 +324,59 @@ def submit_answer(request):
     if not (user and question_id):
         return JsonResponse({"status": "error", "message": "Invalid request"})
 
-    try:
-        question = Vocabulary.objects.get(id=question_id)
-    except Vocabulary.DoesNotExist:
-        return JsonResponse({"status": "error", "message": "Question not found"})
+    question = get_object_or_404(Vocabulary, id=question_id)
 
     expected = question.target_word
     correct = _is_correct(given_answer, expected)
 
-    with transaction.atomic():
-        quiz = question.quiz_list
-        
+    quiz = question.quiz_list
+    if not quiz:
         user_answer = UserAnswer.objects.create(
             user=user,
             question=question,
-            quiz_list=quiz,
+            quiz_list=None,
             given_answer=given_answer,
             is_correct=correct,
         )
+        return JsonResponse({"status": "ok", "saved_id": user_answer.id, "is_correct": correct})
 
-        if correct and quiz:
-            QuizList.objects.filter(pk=question.quiz_list.pk).update(score=F("score")+1)
+    deck = QuizList.objects.select_for_update().get(pk=quiz.pk)
+
+    user_answer = UserAnswer.objects.create(
+        user=user,
+        question=question,
+        quiz_list=deck,
+        given_answer=given_answer,
+        is_correct=correct,
+    )
+
+    update_fields = {"asked_count": F("asked_count") + 1}
+    if correct:
+        update_fields["score"] = F("score") + 1
+    QuizList.objects.filter(pk=deck.pk).update(**update_fields)
+    deck.refresh_from_db(fields=["asked_count", "score", "question_count"])
+
+    if deck.asked_count >= deck.question_count:
+        last = QuizHistory.objects.filter(user=user, name=request.POST.get("session_name")).order_by('-attempt').first()
+        attempt_number = (last.attempt if last else 0) + 1
+        if not QuizHistory.objects.filter(user=user, name=request.POST.get("session_name"), attempt=attempt_number).exists():
+            QuizHistory.objects.create(
+                user=user,
+                score=deck.score,
+                question_count=deck.question_count,
+                attempt=attempt_number,
+                name=request.POST.get("session_name")
+            )
+        _reset_quiz_flags(user, deck.id)
 
     return JsonResponse({
         "status": "ok",
         "saved_id": user_answer.id,
-        "is_correct": correct
+        "is_correct": correct,
+        "score": deck.score,
+        "asked_count": deck.asked_count,
+        "total": deck.question_count,
+        "done": deck.asked_count >= deck.question_count
     })
 
 
