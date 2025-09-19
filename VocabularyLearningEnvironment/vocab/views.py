@@ -147,8 +147,7 @@ def choose_random_word(user, session):
             )
 
             if not vocab_qs.exists():
-                QuizList.objects.filter(pk=deck.id).update(asked_count=F("question_count"))
-                _reset_quiz_flags(user, deck.id)
+
                 return {
                     "status": "done",
                     "message": "Quiz complete.",
@@ -157,9 +156,6 @@ def choose_random_word(user, session):
                 }
 
             chosen_vocab = vocab_qs.order_by("?").first()
-            question = chosen_vocab.source_word
-            translation = chosen_vocab.target_word
-
             UserMemory.objects.filter(user=user, vocabulary=chosen_vocab).update(is_asked_in_quiz=True)
 
             updated = QuizList.objects.filter(
@@ -169,7 +165,7 @@ def choose_random_word(user, session):
 
             deck.refresh_from_db(fields=["asked_count", "score", "question_count"])
 
-            if deck.asked_count >= deck.question_count:
+            if deck.asked_count + 1 >= deck.question_count:
                 last = QuizHistory.objects.filter(user=user, name=session.name).order_by('-attempt').first()
                 attempt_number = (last.attempt if last else 0) + 1
                 if not QuizHistory.objects.filter(user=user, name=session.name, attempt=attempt_number).exists():
@@ -182,12 +178,6 @@ def choose_random_word(user, session):
                     )
 
                 _reset_quiz_flags(user, deck.id)
-                return {
-                    "status": "done",
-                    "message": "Quiz complete.",
-                    "score": deck.score,
-                    "total": deck.question_count
-                }
 
         return {
             "status": "ok",
@@ -343,6 +333,7 @@ def _is_correct(given: str, expected: str) -> bool:
     return rm(g) == rm(e)
 
 
+
 @require_POST
 @login_required
 def submit_answer(request):
@@ -362,14 +353,17 @@ def submit_answer(request):
     correct = _is_correct(given_answer, expected)
 
     with transaction.atomic():
+        quiz = question.quiz_list
+        
         user_answer = UserAnswer.objects.create(
             user=user,
             question=question,
+            quiz_list=quiz,
             given_answer=given_answer,
             is_correct=correct,
         )
 
-        if correct and question.quiz_list:
+        if correct and quiz:
             QuizList.objects.filter(pk=question.quiz_list.pk).update(score=F("score")+1)
 
     return JsonResponse({
@@ -377,6 +371,7 @@ def submit_answer(request):
         "saved_id": user_answer.id,
         "is_correct": correct
     })
+
 
 
 @login_required

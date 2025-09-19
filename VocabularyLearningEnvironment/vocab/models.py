@@ -52,6 +52,7 @@ class UserAnswer(models.Model):
     user = models.ForeignKey(Member, on_delete=models.CASCADE)
     given_answer = models.CharField(max_length=100)
     is_correct = models.BooleanField(default=False)
+    quiz_list = models.ForeignKey(QuizList, on_delete=models.CASCADE, null=True, blank=True, related_name="answers")
 
     def __str__(self):
         return "User " + str(self.user.username) + " - Question " + str(self.question.source_word)
