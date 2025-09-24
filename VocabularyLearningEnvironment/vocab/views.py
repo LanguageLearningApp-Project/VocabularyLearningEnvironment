@@ -354,20 +354,22 @@ def submit_answer(request):
     if correct:
         update_fields["score"] = F("score") + 1
     QuizList.objects.filter(pk=deck.pk).update(**update_fields)
-    deck.refresh_from_db(fields=["asked_count", "score", "question_count"])
+    deck.refresh_from_db(fields=["asked_count","score","question_count"])
+
+    session_id = request.POST.get("session_id") or request.GET.get("session_id")
+    session = get_object_or_404(StudySession, id=session_id, user=user)
 
     if deck.asked_count >= deck.question_count:
-        last = QuizHistory.objects.filter(user=user, name=request.POST.get("session_name")).order_by('-attempt').first()
+        last = QuizHistory.objects.filter(user=user, name=session.name).order_by('-attempt').first()
         attempt_number = (last.attempt if last else 0) + 1
-        if not QuizHistory.objects.filter(user=user, name=request.POST.get("session_name"), attempt=attempt_number).exists():
-            QuizHistory.objects.create(
-                user=user,
-                score=deck.score,
-                question_count=deck.question_count,
-                attempt=attempt_number,
-                name=request.POST.get("session_name")
-            )
-        _reset_quiz_flags(user, deck.id)
+        QuizHistory.objects.create(
+            user=user,
+            score=deck.score,
+            question_count=deck.question_count,
+            attempt=attempt_number,
+            name=session.name
+        )
+        #_reset_quiz_flags(user, deck.id) #keeping the flags true so that choose_random_word can return true
 
     return JsonResponse({
         "status": "ok",
@@ -378,8 +380,6 @@ def submit_answer(request):
         "total": deck.question_count,
         "done": deck.asked_count >= deck.question_count
     })
-
-
 
 @login_required
 #Conveys input form to the session model
@@ -646,7 +646,7 @@ def progress_check(request, session_id):
     )
 
 def create_quiz_list(user, question_count):
-    user_memory_vocabs = Vocabulary.objects.filter(usermemory__user=user, usermemory__is_asked_in_quiz=False).distinct()    
+    user_memory_vocabs = Vocabulary.objects.filter(usermemory__user=user, usermemory__is_asked_in_quiz=False, quiz_list__isnull=True).distinct() #only the words that were never related to a quiz are added   
     available_count = user_memory_vocabs.count()
 
     if available_count < question_count:

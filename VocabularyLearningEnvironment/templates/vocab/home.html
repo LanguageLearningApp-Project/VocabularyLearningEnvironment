@@ -170,6 +170,7 @@ async function submitAnswer(questionId, givenAnswer) {
     formData.append('question_id', questionId);
     formData.append('given_answer', givenAnswer);
     formData.append('csrfmiddlewaretoken', csrftoken);
+    formData.append('session_id', sessionId);
 
     const response = await fetch('/submit-answer/', {
       method: 'POST',

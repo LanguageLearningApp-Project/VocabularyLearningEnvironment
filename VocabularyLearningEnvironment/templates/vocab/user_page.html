@@ -372,6 +372,7 @@ if (goalTypeSelect) {
         const j = await r.json().catch(()=>({}));
         if (!r.ok) {
           alert(j.message || 'Could not reset quiz.');
+          updateQuizButtons(id);
           return;
         }
 
